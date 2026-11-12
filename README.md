@@ -65,3 +65,7 @@ Zscaler's built-in categories only; tenant custom categories come from the logs.
 - `zia_api.py`: OneAPI token, `urlLookup`, category catalog
 - `HELP.html`: standalone copy of the How to use page (opens without the app running)
 - `zia_category_names.json`: category ID → console display name (the API only returns IDs)
+
+## License
+
+MIT. See [LICENSE](LICENSE).
