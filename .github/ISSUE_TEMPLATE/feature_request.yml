@@ -1,0 +1,16 @@
+name: Feature request
+description: Suggest a new column, summary or option
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: need
+    attributes:
+      label: What are you trying to do?
+      description: The question you want the portal to answer, or the step that is slow today.
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would help?
+      description: The column, summary or option you have in mind. Name the Web Insights columns it would use, if you know them.
