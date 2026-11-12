@@ -1,4 +1,4 @@
-# Starts the Web Insights Portal at http://127.0.0.1:5055 (first run installs what it needs).
+# Starts the ZIA Toolkit dashboard at http://127.0.0.1:5055 (first run installs what it needs).
 Set-Location -Path $PSScriptRoot
 if (-not (Test-Path .venv)) {
   Write-Host "First run: creating a Python environment and installing Flask, pandas, openpyxl..."

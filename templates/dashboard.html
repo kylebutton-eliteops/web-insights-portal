@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% block sub %}Set up once: connect Zscaler, add your exports, then open any tool. Every tool shares the connection, exports and lookup cache.{% endblock %}
+{% block body %}
+{% if msg %}<div class="note ok">{{ msg }}</div>{% endif %}
+{% if err %}<div class="note err">{{ err }}</div>{% endif %}
+
+<details class="panel guide" id="welcome" open>
+  <summary><span class="gt">Getting started</span><span class="meta">Three steps, about five minutes</span></summary>
+  <div class="gbody">
+    <ol class="steps">
+      <li><b>Connect Zscaler once.</b> Type your OneAPI client below (vanity domain, client ID, secret), or put it in a <code>.env</code> file and restart. Every tool uses it. You can skip this and still categorize from the logs alone.</li>
+      <li><b>Add your exports once.</b> In ZIA go to <i>Analytics › Web Insights › Logs</i>, pick the time range and filters, turn on the URL, category and rule columns, and export to CSV. Add the file(s) to the library below. For Block impact, filter the export to <i>Policy Action = Allowed</i>.</li>
+      <li><b>Pick a tool.</b> <b>Web Insights</b> de-duplicates by host and adds categories, apps, rules and SSL status. <b>Block impact</b> shows which allowed traffic a planned category block would break.</li>
+    </ol>
+    <div class="trow"><a class="link" href="{{ url_for('help_page') }}">Full instructions</a><button class="btn small" type="button" id="hideWelcome">Got it, hide this</button></div>
+  </div>
+</details>
+<script>
+  (function(){
+    var d = document.getElementById("welcome"), k = "zt:welcome-hidden";
+    try { if (localStorage.getItem(k) === "1") d.open = false; } catch(e) {}
+    document.getElementById("hideWelcome").onclick = function(){ d.open = false; try { localStorage.setItem(k, "1"); } catch(e) {} };
+    d.addEventListener("toggle", function(){ if (d.open) { try { localStorage.removeItem(k); } catch(e) {} } });
+  })();
+</script>
+
+<div class="runlayout">
+  <div class="setup">
+    <div class="panel">
+      <div class="ph"><h2><span class="n">1</span>Zscaler connection</h2></div>
+      <div class="pb">
+      {% if conn.ready %}
+        <div class="note ok"><b>Connected</b>{% if conn.vanity %} to <code>{{ conn.vanity }}</code>{% endif %}{% if conn.client_id_tail %} (client ending {{ conn.client_id_tail }}){% endif %}, from the {{ conn.source }}. All tools use this connection.</div>
+        {% if 'typed' in conn.source %}<form class="inline" method="post" action="{{ url_for('connect') }}"><input type="hidden" name="action" value="disconnect"><div><button class="btn" type="submit">Disconnect</button></div></form>{% endif %}
+      {% else %}
+        <p class="help">Enter your OneAPI client once, or put it in a <code>.env</code> file next to <code>app.py</code> (<code>ZIA_VANITY_DOMAIN</code>, <code>ZIA_CLIENT_ID</code>, <code>ZIA_CLIENT_SECRET</code>) and restart. Typed values are held in memory only and forgotten when you stop the toolkit.</p>
+        <form method="post" action="{{ url_for('connect') }}">
+          <div class="field"><label for="v">Vanity domain</label><input class="input" type="text" id="v" name="vanity" placeholder="yourcompany" autocomplete="off" spellcheck="false"><small>The part before <code>.zslogin.net</code></small></div>
+          <div class="grid2">
+            <div class="field"><label for="c">Client ID</label><input class="input" type="text" id="c" name="client_id" autocomplete="off" spellcheck="false"></div>
+            <div class="field"><label for="s">Client secret</label><input class="input" type="password" id="s" name="client_secret" autocomplete="off"></div>
+          </div>
+          <div><button class="btn primary" type="submit">Connect</button></div>
+        </form>
+        <p class="help">The API client needs a ZIA API role with view access to URL categories and URL Filtering policy. <a class="link" href="{{ url_for('help_page') }}#setup">How to set that up</a>.</p>
+      {% endif %}
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="ph"><h2><span class="n">2</span>Exports</h2></div>
+      <div class="pb">
+        <p class="help">Add Web Insights CSV exports once; every tool reads from this library. They contain user names, so remove them when you're done.</p>
+        <form class="inline" method="post" action="{{ url_for('exports_upload') }}" enctype="multipart/form-data">
+          <div class="trow">
+            <input type="file" name="export" accept=".csv,.gz,.zip,.txt,.tsv,.xlsx,.xlsm" multiple required>
+            <button class="btn primary" type="submit">Add to library</button>
+          </div>
+        </form>
+        {% if files %}
+        <div class="files">
+          {% for f in files %}
+          <div class="file" style="grid-template-columns:minmax(0,1fr) auto auto">
+            <span class="fn">{{ f.name }}</span><span class="sz">{{ f.size|size }}</span>
+            <form class="inline" method="post" action="{{ url_for('exports_delete') }}"><input type="hidden" name="name" value="{{ f.name }}"><button class="x" type="submit" title="Remove {{ f.name }}" aria-label="Remove {{ f.name }}">×</button></form>
+          </div>{% endfor %}
+        </div>
+        <form class="inline" method="post" action="{{ url_for('exports_delete') }}"><input type="hidden" name="name" value="__all__"><div><button class="btn small danger" type="submit">Remove all</button></div></form>
+        {% else %}<div class="meta">No exports yet.</div>{% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="setup">
+    <div class="panel">
+      <div class="ph"><h2><span class="n">3</span>Pick a tool</h2></div>
+      <div class="pb">
+        <div class="card">
+          <h3>Web Insights</h3>
+          <p class="help">De-duplicates an export by host and adds categories, cloud apps, forwarding and SSL rules, rule hits and custom-category gaps. CSV, zip or Excel out.</p>
+          <div><a class="btn primary" href="{{ url_for('index') }}">Open Web Insights</a></div>
+        </div>
+        <div class="card">
+          <h3>Block impact</h3>
+          <p class="help">Before you block URL categories: which allowed traffic would break? Shows hidden multi-category matches and the rule that enforces each domain.</p>
+          <div><a class="btn primary" href="{{ impact_url }}">Open Block impact</a></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="ph"><h2>Shared lookup cache</h2></div>
+      <div class="sum free" style="grid-template-columns:minmax(0,1fr)">
+        <div class="stat"><div class="k">Hosts cached</div><div class="v">{{ '{:,}'.format(cache_count) }}</div><div class="s">A host looked up in one tool is never looked up again in the other.</div></div>
+      </div>
+      <div class="pb">
+        <p class="help">Stored in <code>{{ workspace }}</code>. Clear it if categories changed and you want fresh lookups.</p>
+        <form class="inline" method="post" action="{{ url_for('clear_cache') }}" onsubmit="return confirm('Clear the shared lookup cache?')">
+          <div><button class="btn" type="submit" {{ 'disabled' if not cache_count }}>Clear cache</button></div>
+        </form>
+      </div>
+    </div>
+
+    {% if jobs %}
+    <div class="panel">
+      <div class="ph"><h2>Recent Web Insights runs</h2></div>
+      <div class="tablewrap"><table>
+        <thead><tr><th>File</th><th>Started</th><th>Status</th></tr></thead>
+        <tbody>{% for id, j in jobs %}<tr><td class="d"><a class="link" href="{{ url_for('job_page', job_id=id) }}">{{ j.filename }}</a></td>
+          <td>{{ j.started.strftime('%b %d %H:%M') }}</td><td><span class="pill {{ 'ok' if j.status == 'done' else 'err' if j.status == 'error' else 'run' }}">{{ j.status }}</span></td></tr>{% endfor %}</tbody>
+      </table></div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

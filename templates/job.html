@@ -1,68 +1,69 @@
 {% extends "base.html" %}
-{% block title %}{{ job.filename }} | Web Insights Portal{% endblock %}
+{% block title %}{{ job.filename }} | ZIA Toolkit{% endblock %}
+{% block heading %}{{ job.filename }}{% endblock %}
+{% block sub %}Started {{ job.started.strftime('%b %d, %Y %H:%M') }} · Zscaler lookup {{ 'on' if job.use_api else 'off' }}{% endblock %}
 {% block body %}
+{% if job.status == 'running' %}
+<div class="panel"><div class="pb">
+  <div class="phase"><span class="pill run">Running</span><span class="meta" id="msg">{{ job.msg }}</span></div>
+  <div class="bar"><i id="bar" style="width: {{ job.pct }}%"></i></div>
+</div></div>
+<script>
+  (function poll() {
+    fetch("{{ url_for('job_status', job_id=job_id) }}").then(r => r.json()).then(s => {
+      document.getElementById("bar").style.width = s.pct + "%";
+      document.getElementById("msg").textContent = s.msg || "";
+      if (s.status === "running") setTimeout(poll, 1500); else location.reload();
+    }).catch(() => setTimeout(poll, 3000));
+  })();
+</script>
+{% elif job.status == 'error' %}
+<div class="note err"><b>That didn't work.</b> {{ job.error }}</div>
+<div class="actions"><a class="btn" href="{{ url_for('index') }}">Back</a> <a class="btn" href="{{ url_for('help_page') }}#trouble">Troubleshooting</a></div>
+{% else %}
+{% set i = job.info %}
+<div class="actions">
+  <a class="btn primary" href="{{ url_for('download', job_id=job_id, kind='hosts') }}">Download hosts CSV</a>
+  <a class="btn" href="{{ url_for('download', job_id=job_id, kind='zip') }}">All CSVs (.zip)</a>
+  <a class="btn" href="{{ url_for('download', job_id=job_id, kind='xlsx') }}">Excel workbook</a>
+</div>
+<div class="next"><span class="lead">Next</span><span>Planning to block categories? Check what would break with <b>Block impact</b> on the same export (filter it to Policy Action = Allowed first).</span><a class="btn" href="{{ impact_url }}">Open Block impact</a></div>
 <div class="panel">
-  <h1>{{ job.filename }}</h1>
-  <p class="muted">Started {{ job.started.strftime('%b %d, %Y %H:%M') }} · OneAPI lookup {{ 'on' if job.use_api else 'off' }}</p>
-
-  {% if job.status == 'running' %}
-    <div class="bar"><div id="bar" style="width: {{ job.pct }}%"></div></div>
-    <p id="msg" class="muted" style="margin-top:8px">{{ job.msg }}</p>
-    <script>
-      (function poll() {
-        fetch("{{ url_for('job_status', job_id=job_id) }}").then(r => r.json()).then(s => {
-          document.getElementById("bar").style.width = s.pct + "%";
-          document.getElementById("msg").textContent = s.msg || "";
-          if (s.status === "running") setTimeout(poll, 1500); else location.reload();
-        }).catch(() => setTimeout(poll, 3000));
-      })();
-    </script>
-  {% elif job.status == 'error' %}
-    <div class="note err"><b>That didn't work.</b> {{ job.error }}</div>
-    <p><a class="btn secondary" href="{{ url_for('index') }}">Try another file</a> <a class="btn secondary" href="{{ url_for('help_page') }}#trouble">Troubleshooting</a></p>
-  {% else %}
-    {% set i = job.info %}
-    <div class="row" style="margin: 6px 0 18px">
-      <a class="btn" href="{{ url_for('download', job_id=job_id, kind='hosts') }}">Download hosts CSV</a>
-      <a class="btn secondary" href="{{ url_for('download', job_id=job_id, kind='zip') }}">All CSVs (.zip)</a>
-      <a class="btn secondary" href="{{ url_for('download', job_id=job_id, kind='xlsx') }}">Excel workbook</a>
-    </div>
-    <div class="grid">
-      <div class="stat"><b>{{ '{:,}'.format(i.rows) }}</b><span>rows read</span></div>
-      <div class="stat"><b>{{ '{:,}'.format(i.hosts) }}</b><span>unique hosts</span></div>
-      <div class="stat"><b>{{ '{:,}'.format(i.urls) }}</b><span>unique full URLs</span></div>
-      {% if i.users %}<div class="stat"><b>{{ '{:,}'.format(i.users) }}</b><span>users</span></div>{% endif %}
-    </div>
-    {% if i.time_range %}<p class="muted" style="margin-top:12px">Time range: {{ i.time_range }}</p>{% endif %}
-    {% if i.row_cap_warning %}<div class="note">This export has 1,000,000 rows, which is Web Insights' export limit, so it probably doesn't cover the whole time range you picked. Export a shorter time range (or add filters) to get everything.</div>{% endif %}
-    {% if i.missing_columns %}<div class="note">These useful columns weren't in the export: {{ i.missing_columns|join(', ') }}. Add them in Web Insights before exporting to get the matching output columns.</div>{% endif %}
+  <div class="sum">
+    <div class="stat"><div class="k">Rows read</div><div class="v">{{ '{:,}'.format(i.rows) }}</div></div>
+    <div class="stat"><div class="k">Unique hosts</div><div class="v">{{ '{:,}'.format(i.hosts) }}</div></div>
+    <div class="stat"><div class="k">Unique full URLs</div><div class="v">{{ '{:,}'.format(i.urls) }}</div></div>
+    {% if i.users %}<div class="stat"><div class="k">Users</div><div class="v">{{ '{:,}'.format(i.users) }}</div></div>{% endif %}
+  </div>
+  <div class="pb">
+    {% if i.time_range %}<div class="meta">Time range: {{ i.time_range }}</div>{% endif %}
+    {% if i.row_cap_warning %}<div class="note warn">This export has 1,000,000 rows, which is Web Insights' export limit, so it probably doesn't cover the whole time range you picked. Export a shorter time range (or add filters) to get everything.</div>{% endif %}
+    {% if i.missing_columns %}<div class="note warn">These useful columns weren't in the export: {{ i.missing_columns|join(', ') }}. Add them in Web Insights before exporting to get the matching output columns.</div>{% endif %}
     {% if i.rule_columns %}<div class="note ok">Rule-name columns found and summarized: {{ i.rule_columns|join(', ') }}.</div>
-    {% else %}<div class="note">No URL Filtering / Cloud App Control / SSL Inspection rule-name columns in this export, so there's no "rule hit" column. See <a href="{{ url_for('help_page') }}#export">How to use</a> to add them.</div>{% endif %}
-    {% if i.api_note %}<p class="muted">{{ i.api_note }}</p>{% endif %}
-  {% endif %}
+    {% else %}<div class="note warn">No URL Filtering / Cloud App Control / SSL Inspection rule-name columns in this export, so there's no "rule hit" column. See <a class="link" href="{{ url_for('help_page') }}#export">How to use</a> to add them.</div>{% endif %}
+    {% if i.api_note %}<div class="meta">{{ i.api_note }}</div>{% endif %}
+  </div>
 </div>
 
-{% if job.status == 'done' %}
 <div class="panel">
-  <h2>Top 25 hosts</h2>
-  <div class="table-wrap"><table>
-    <tr>{% for c in job.preview_cols %}<th>{{ c }}</th>{% endfor %}</tr>
-    {% for r in job.preview %}<tr>{% for c in job.preview_cols %}
-      <td class="{{ 'num' if c == 'Hits' }}">{{ '{:,}'.format(r[c]) if c == 'Hits' else r[c] }}</td>{% endfor %}</tr>{% endfor %}
+  <div class="ph"><h2>Top 25 hosts</h2></div>
+  <div class="tablewrap"><table>
+    <thead><tr>{% for c in job.preview_cols %}<th class="{{ 'n' if c == 'Hits' }}">{{ c }}</th>{% endfor %}</tr></thead>
+    <tbody>{% for r in job.preview %}<tr>{% for c in job.preview_cols %}
+      <td class="{{ 'n' if c == 'Hits' else 'd' if c == 'Host' }}">{{ '{:,}'.format(r[c]) if c == 'Hits' else r[c] }}</td>{% endfor %}</tr>{% endfor %}</tbody>
   </table></div>
 </div>
+{% set titles = {'logged_categories': 'Logged categories', 'api_categories': 'Zscaler categories (OneAPI)',
+                 'ssl_review': 'SSL bypass review', 'forwarding_rules': 'Forwarding rules'} %}
 {% for name, rows in job.summaries.items() %}{% if rows %}
 <div class="panel">
-  {% set titles = {'logged_categories': 'Logged categories', 'api_categories': 'Zscaler categories (OneAPI)',
-                   'ssl_review': 'SSL bypass review', 'forwarding_rules': 'Forwarding rules'} %}
-  <h2>{{ titles.get(name, name.replace('rule_', '').replace('_', ' ').capitalize()) }}</h2>
-  <div class="table-wrap"><table>
-    <tr>{% for c in rows[0].keys() %}<th>{{ c }}</th>{% endfor %}</tr>
-    {% for r in rows %}<tr>{% for c, v in r.items() %}
-      <td class="{{ 'num' if v is number }}">{% if '%' in c %}{{ '{:.1%}'.format(v) }}{% elif v is number %}{{ '{:,}'.format(v) }}{% else %}{{ v }}{% endif %}</td>
-    {% endfor %}</tr>{% endfor %}
+  <div class="ph"><h2>{{ titles.get(name, name.replace('rule_', '').replace('_', ' ').capitalize()) }}</h2><span class="meta">Top 15 shown; the full table is in the zip and the workbook.</span></div>
+  <div class="tablewrap"><table>
+    <thead><tr>{% for c in rows[0].keys() %}<th>{{ c }}</th>{% endfor %}</tr></thead>
+    <tbody>{% for r in rows %}<tr>{% for c, v in r.items() %}
+      <td class="{{ 'n' if v is number }}">{% if '%' in c %}{{ '{:.1%}'.format(v) }}{% elif v is number %}{{ '{:,}'.format(v) }}{% else %}{{ v }}{% endif %}</td>
+    {% endfor %}</tr>{% endfor %}</tbody>
   </table></div>
-  <p class="muted" style="margin-top:8px">Top 15 shown; the full table is in the zip and the workbook.</p>
 </div>
 {% endif %}{% endfor %}
 {% endif %}

@@ -1,0 +1,890 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ZIA Category Impact</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@600&display=swap">
+<link rel="stylesheet" href="/static/toolkit.css">
+</head>
+<body>
+<div class="wrap">
+  <nav class="toolnav" aria-label="Toolkit">
+    <a href="/">Dashboard</a><a href="/insights">Web Insights</a><a href="/impact/" aria-current="page">Block impact</a><a href="/help">How to use</a>
+  </nav>
+  <header>
+    <div>
+      <h1>Block impact</h1>
+      <div class="meta" id="hdrMeta">Find allowed traffic that a new category block would catch.</div>
+    </div>
+    <div class="hdr-right"><span class="conn" id="conn">Checking…</span><div class="meta" id="wsMeta"></div><div class="meta">v2.2</div></div>
+  </header>
+
+  <div class="note err" id="notServed" hidden style="font-size:14px;line-height:1.6">
+    <b>This page only works when the tool opens it.</b> You opened the file directly, so uploads and lookups can't reach the tool.
+    Close this tab, then double-click <b>Start ZIA Impact</b> in the same folder (or run <code>python3 zia_impact_gui.py</code>) and use the browser tab it opens.
+  </div>
+  <div class="note err" id="stale" hidden style="font-size:14px">This tab is from an earlier session of the tool. <a href="/impact/" class="link">Reload the page</a> to reconnect.</div>
+  <div class="meta">Need a walkthrough? See <a class="link" href="/help#impact">How to use</a> (Block impact section).</div>
+
+  <div class="next" id="next" hidden></div>
+
+  <nav class="tabs" role="tablist">
+    <button class="tab" role="tab" id="tabRun" aria-selected="true" aria-controls="viewRun">1. Run lookup</button>
+    <button class="tab" role="tab" id="tabRes" aria-selected="false" aria-controls="viewRes">2. Review impact<span class="dot" id="resDot" hidden></span></button>
+  </nav>
+
+  <!-- ===================== RUN ===================== -->
+  <section id="viewRun" role="tabpanel" aria-labelledby="tabRun">
+    <div class="runlayout">
+      <div class="setup">
+        <div class="panel">
+          <div class="ph"><h2><span class="n">A</span>Log exports <span class="tip" tabindex="0" role="note" data-tip="ZIA Web Insights › Logs export (CSV, ideally filtered to Policy Action = Allowed). You can add several files; hits add up per domain. .csv, .csv.gz, .zip and .xlsx are accepted. Files are copied into the &quot;ZIA Category Impact&quot; folder in your home folder and kept between runs.">?</span></h2>
+            <div class="actions">
+              <button class="btn small danger" type="button" id="clearFiles" hidden>Remove all</button>
+              <label class="btn small primary" for="csvIn" data-tip="Pick one or more log files from your computer. Same as clicking the drop area.">Upload CSV…</label>
+            </div></div>
+          <div class="pb">
+            <div class="drop" id="drop" tabindex="0" role="button" aria-label="Add log files">
+              Drop ZIA <b>Web Insights</b> exports here or <b>click to browse</b><br>
+              <small>.csv, .csv.gz, .zip or .xlsx · allowed traffic, last 14 days</small>
+            </div>
+            <input type="file" id="fileIn" multiple accept=".csv,.gz,.zip,.txt,.tsv,.xlsx,.xlsm" hidden>
+            <input type="file" id="csvIn" multiple accept=".csv,.xlsx,text/csv" hidden>
+            <div class="manual">
+              <label for="csvIn" class="link">Upload a CSV of logs manually</label>
+              <small>Any CSV works: a ZIA export, a SIEM or ADX pull, or your own list. It needs a URL, host or domain column; a header row is optional. If there's no header, column 1 is read as the URL and a numeric column 2 as the hit count. Columns named <code>hits</code> or <code>count</code> are used as hit counts.</small>
+            </div>
+            <div class="note err" id="upErr" hidden></div>
+            <div id="uploading" hidden>
+              <div class="meta" id="upLabel"></div>
+              <div class="upbar"><i id="upBar"></i></div>
+            </div>
+            <div class="files" id="files"></div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="ph"><h2><span class="n">B</span>Zscaler API</h2></div>
+          <div class="pb">
+            <div id="envNote" class="note ok" hidden></div>
+            <div id="noCreds" class="note warn" hidden>No Zscaler credentials yet. Add them once on the <a href="/" class="link">dashboard</a> (or in the toolkit's <code>.env</code> file); every tool uses the same ones.</div>
+            <p class="help">Shared with the other tools in the toolkit: sign in once. The API role needs read access to URL categories and URL Filtering policy; nothing in your tenant is changed.</p>
+            <div hidden>
+<div id="oneFields" class="grid2">
+              <div class="field"><label for="cId">Client ID <span class="tip" tabindex="0" role="note" data-tip="From ZIdentity › Integration › API Clients. The client must also be given a ZIA API role, or ZIA answers 401: create one in ZIA › Administration › Role Management › Add API Role, then ZIdentity › Integration › API Resources › Sync Now, then edit the client and tick that role under Resources.">?</span></label><input class="input" id="cId" autocomplete="off" spellcheck="false"></div>
+              <div class="field"><label for="cSecret">Client secret <span class="tip" tabindex="0" role="note" data-tip="Shown once when the API client is created. If you don&#x27;t have it, generate a new secret on the client.">?</span></label><input class="input" id="cSecret" type="password" autocomplete="off"></div>
+              <div class="field"><label for="cVanity">Vanity domain <span class="tip" tabindex="0" role="note" data-tip="Your ZIdentity sign-in address is https://&lt;vanity&gt;.zslogin.net. Enter just the &lt;vanity&gt; part.">?</span></label><input class="input" id="cVanity" placeholder="yourcompany" autocomplete="off" spellcheck="false"><small>The part before <code>.zslogin.net</code></small></div>
+              <div class="field"><label for="cCloud1">Cloud <span class="tip" tabindex="0" role="note" data-tip="Leave blank for production. Only fill this in if Zscaler told you to use a non-production cloud such as beta.">?</span></label><input class="input" id="cCloud1" placeholder="production (leave blank)" autocomplete="off" spellcheck="false"><small>Only for beta or other non-production clouds</small></div>
+            </div>
+            <div id="legFields" class="grid2" hidden>
+              <div class="field"><label for="lUser">Admin username <span class="tip" tabindex="0" role="note" data-tip="A ZIA admin account allowed to use the API. A dedicated read-only API admin is best.">?</span></label><input class="input" id="lUser" autocomplete="off" spellcheck="false"></div>
+              <div class="field"><label for="lPass">Password <span class="tip" tabindex="0" role="note" data-tip="That admin&#x27;s ZIA password. Used once to start an API session and then discarded.">?</span></label><input class="input" id="lPass" type="password" autocomplete="off"></div>
+              <div class="field"><label for="lKey">API key <span class="tip" tabindex="0" role="note" data-tip="ZIA Admin Portal › Administration › Cloud Service API Security › API key. Copy the full key.">?</span></label><input class="input" id="lKey" type="password" autocomplete="off"><small>Administration › Cloud Service API Security</small></div>
+              <div class="field"><label for="lCloud">Cloud <span class="tip" tabindex="0" role="note" data-tip="The cloud in your ZIA admin address. If you sign in at admin.zscalertwo.net, pick zscalertwo.net.">?</span></label>
+                <select class="input" id="lCloud">
+                  <option value="">Select…</option>
+                  <option>zscaler.net</option><option>zscalerone.net</option><option>zscalertwo.net</option>
+                  <option>zscalerthree.net</option><option>zscloud.net</option><option>zscalerbeta.net</option>
+                  <option>zscalergov.net</option><option>zscalerten.net</option>
+                </select><small>Shown in the ZIA admin URL, e.g. admin.<b>zscalertwo.net</b></small></div>
+            </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="ph"><h2><span class="n">C</span>Options <span class="tip" tabindex="0" role="note" data-tip="The defaults work for a standard Web Insights export. Change these only if the dry run shows a problem or you want to limit the run.">?</span></h2></div>
+          <div class="pb">
+            <div class="grid2">
+              <div class="field"><label for="oTenant">Tenant label <span class="tip" tabindex="0" role="note" data-tip="A name shown on the results, such as the company name. Also keeps saved selections and exceptions separate per tenant.">?</span></label><input class="input" id="oTenant" placeholder="Company name"><small>Shown on the results</small></div>
+              <div class="field"><label for="oMin">Skip domains seen fewer than <span class="tip" tabindex="0" role="note" data-tip="Ignore domains that appear fewer than this many times. 1 keeps everything; 2 or more skips one-off visits and speeds up big lookups.">?</span></label><input class="input" id="oMin" type="number" min="1" value="1"><small>hits in the logs</small></div>
+              <div class="field"><label for="oMax">Look up at most <span class="tip" tabindex="0" role="note" data-tip="Cap the number of new lookups in this run, busiest domains first. 0 means all. Useful for very large exports: look up the top 20,000 now, the rest later.">?</span></label><input class="input" id="oMax" type="number" min="0" value="0"><small>domains this run, busiest first (0 = all)</small></div>
+              <div class="field"><label for="oAllow">Count as allowed when action matches <span class="tip" tabindex="0" role="note" data-tip="Rows whose Policy Action contains this text count as allowed traffic. The default &#x27;allow&#x27; matches &#x27;Allowed&#x27;. Use a regular expression for anything unusual.">?</span></label><input class="input" id="oAllow" value="allow" spellcheck="false"><small>Regular expression, case-insensitive</small></div>
+            </div>
+            <details>
+              <summary>Column overrides and other settings <span class="tip" tabindex="0" role="note" data-tip="Only needed if the dry run picked the wrong column. Type the column header exactly as it appears in the CSV.">?</span></summary>
+              <div class="grid2">
+                <div class="field"><label for="oUrlCol">URL column</label><input class="input" id="oUrlCol" placeholder="auto-detect"></div>
+                <div class="field"><label for="oActCol">Action column</label><input class="input" id="oActCol" placeholder="auto-detect"></div>
+                <div class="field"><label for="oCatCol">Category column</label><input class="input" id="oCatCol" placeholder="auto-detect"></div>
+                <div class="field"><label for="oUserCol">User column</label><input class="input" id="oUserCol" placeholder="auto-detect"></div>
+                <div class="field" style="grid-column:1/-1"><label for="oBase">API base URL override</label><input class="input" id="oBase" placeholder="leave blank" spellcheck="false"></div>
+              </div>
+              <div style="margin-top:10px;display:flex;gap:16px;flex-wrap:wrap;align-items:center">
+                <label class="check"><input type="checkbox" id="oAllActions"> Include blocked traffic too <span class="tip" tabindex="0" role="note" data-tip="Normally only allowed traffic is analysed, since blocked traffic can&#x27;t break. Turn this on to look at everything.">?</span></label>
+                <button type="button" class="btn small danger" id="clearCache" data-tip="Forget saved category lookups so the next run asks Zscaler again. Only needed if categories have changed.">Clear lookup cache</button>
+              </div>
+            </details>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel runpanel">
+        <div class="ph"><h2>Run <span class="tip" tabindex="0" role="note" data-tip="Dry run first to check the files, then Run lookup. The log below shows exactly what the tool is doing.">?</span></h2>
+          <div class="actions">
+            <button class="btn" type="button" id="btnDry" data-tip="Reads and dedupes the log files and shows which columns it found. Doesn&#x27;t contact Zscaler and needs no credentials. Takes seconds.">Dry run</button>
+            <button class="btn primary" type="button" id="btnRun" data-tip="Reads the files, then asks Zscaler for every category of each domain (100 domains per request, up to 400 requests an hour). Needs the API details in box B.">Run lookup</button>
+            <button class="btn danger" type="button" id="btnStop" hidden data-tip="Stops after the current request. Lookups so far are kept; Run lookup again to continue.">Stop</button>
+          </div></div>
+        <div class="pb">
+          <p class="help" id="runHelp">Start with a <b>dry run</b>: it reads the logs, shows which columns it picked, and counts domains without calling Zscaler. Then run the lookup. Lookups are cached, so stopping and running again picks up where you left off.</p>
+          <div id="runStatus" hidden>
+            <div class="phase"><span class="big" id="phBig"></span><span class="pill" id="phPill"></span></div>
+            <div class="meta" id="phNote"></div>
+            <div class="bar" id="bar" style="margin-top:8px"><i id="barFill" style="width:0"></i></div>
+            <div class="kv" style="margin-top:10px">
+              <div><div class="k">Progress</div><div class="v" id="kvDone">–</div></div>
+              <div><div class="k">Elapsed</div><div class="v" id="kvEl">–</div></div>
+              <div><div class="k">Time left</div><div class="v" id="kvEta">–</div></div>
+            </div>
+          </div>
+          <div id="runResult" hidden></div>
+          <div class="console" id="console" aria-live="polite">Waiting for a run.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== RESULTS ===================== -->
+  <section id="viewRes" role="tabpanel" aria-labelledby="tabRes" hidden>
+    <div style="display:grid;gap:12px">
+      <div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;align-items:center">
+        <div class="meta" id="resMeta">No results yet.</div>
+        <div class="actions">
+          <a class="btn" id="dlCsv" href="#" data-tip="One row per domain with hits, users, every Zscaler category, logged category and allowing rule. Opens in Excel.">Download domains.csv</a>
+          <a class="btn" id="dlJson" href="#" data-tip="The full results file. Send it to a colleague; they can load it with Open other results… without running a lookup.">Download results.json</a>
+          <label class="btn" for="resFile" data-tip="Load a results.json someone sent you, or one from an earlier run.">Open other results…</label>
+          <input id="resFile" type="file" accept=".json" hidden>
+        </div>
+      </div>
+      <p class="help">Evaluate a saved category list or tick categories in the <b>Categories</b> menu. Matching uses <b>every</b> category ZIA assigns a domain, not only the one in the logs. The table lists allowed domains that carry any of them. <b>Hidden</b> means the logs filed the domain under a different category, so the block will catch traffic nobody expected (the SharePoint / File Host case). Mark rows as exceptions and copy the list into a custom URL category.</p>
+      <section class="panel evalp" aria-label="Evaluate">
+        <div class="ph"><h2>What would a block catch? <span class="tip" tabindex="0" role="note" data-tip="Enter the categories you plan to block and click Evaluate list. The tool marks every allowed domain carrying any of them, even when the logs filed it under something else.">?</span></h2>
+          <div class="seg" role="group" aria-label="Evaluate by">
+            <button type="button" id="evCatsBtn" aria-pressed="true" data-tip="Evaluate a list of categories you plan to block.">Category list</button>
+            <button type="button" id="evDomsBtn" aria-pressed="false" data-tip="Check specific domains, for example your SharePoint tenants or a partner site, against the logs.">Domain list</button>
+          </div></div>
+        <div class="pb" id="evCats">
+          <div class="evrow">
+            <div class="field" style="flex:2 1 320px">
+              <label for="setText">Categories you plan to block, one per line <span class="tip" tabindex="0" role="note" data-tip="Use names as shown in the ZIA portal (File Host), API names (FILE_HOST), or a super category name to include all its categories. Spacing and punctuation don&#x27;t matter, so FileHost works too.">?</span></label>
+              <textarea class="input" id="setText" rows="6" spellcheck="false"></textarea>
+            </div>
+            <div class="field" style="flex:1 1 220px;align-content:start">
+              <label for="setPick">Saved lists <span class="tip" tabindex="0" role="note" data-tip="Lists are saved in this browser. Pick one to load it into the box, edit it, then Save list… to keep changes.">?</span></label>
+              <select class="input" id="setPick"></select>
+              <div class="actions" style="margin-top:6px">
+                <button class="btn primary" type="button" id="setApply" data-tip="Replace the current planned blocks with the categories in the box, and show which ones appear in your allowed traffic.">Evaluate list</button>
+                <button class="btn" type="button" id="setSave" data-tip="Save the box contents as a named list (overwrites a list with the same name).">Save list…</button>
+                <button class="btn danger" type="button" id="setDel" data-tip="Delete the selected saved list. Click twice to confirm.">Delete</button>
+              </div>
+              <div class="actions" id="saveRow" hidden style="margin-top:6px">
+                <input class="input" id="setName" placeholder="List name" style="flex:1;min-width:0">
+                <button class="btn small primary" type="button" id="setSaveOk">Save</button>
+              </div>
+            </div>
+          </div>
+          <div id="setReport" class="setreport" hidden></div>
+        </div>
+        <div class="pb" id="evDoms" hidden>
+          <div class="field">
+            <label for="domText">Domains to check, one per line. <code>sharepoint.com</code> also matches its subdomains.</label>
+            <textarea class="input" id="domText" rows="5" spellcheck="false" placeholder="yourcompany.sharepoint.com&#10;box.com"></textarea>
+          </div>
+          <div class="actions">
+            <button class="btn primary" type="button" id="domApply" data-tip="Show only these domains (and their subdomains) in the table, with all their categories and the rules that allowed them.">Filter table to these domains</button>
+            <button class="btn" type="button" id="domClear">Clear domain filter</button>
+            <span class="meta" id="domReport"></span>
+          </div>
+        </div>
+      </section>
+      <div class="main" id="resMain">
+        <section class="panel" aria-label="Impact">
+          <div class="sum">
+            <div class="stat block"><div class="k">Domains affected <span class="tip" tabindex="0" role="note" data-tip="Allowed domains that carry at least one planned-block category. These would be blocked.">?</span></div><div class="v" id="sD">0</div><div class="s" id="sDs">pick a category</div></div>
+            <div class="stat block"><div class="k">Hits affected <span class="tip" tabindex="0" role="note" data-tip="Requests to those domains during the log period, and their share of all allowed traffic. The best single measure of impact.">?</span></div><div class="v" id="sH">0</div><div class="s" id="sHs">of allowed traffic</div></div>
+            <div class="stat warn"><div class="k">Hidden matches <span class="tip" tabindex="0" role="note" data-tip="Affected domains the logs filed under a category you are NOT blocking. These are the surprises, like SharePoint logged as Corporate Marketing but also classified as File Host. Review these first.">?</span></div><div class="v" id="sX">0</div><div class="s" id="sXs">logged as another category</div></div>
+            <div class="stat"><div class="k">Most users on one domain <span class="tip" tabindex="0" role="note" data-tip="The largest number of distinct users seen on any single affected domain. A rough guide to how many people one block could disrupt.">?</span></div><div class="v" id="sU">0</div><div class="s">among affected domains</div></div>
+          </div>
+          <div class="blocking" id="blocking"></div>
+          <div class="bybc" id="bybc" hidden>
+            <div class="bybc-h"><span class="lbl">Impact by blocking category <span class="tip" tabindex="0" role="note" data-tip="Each affected domain counted once, under the planned-block category it would be blocked as. Shows which category on your list causes the most impact. Click a row to filter the table to it; click again to clear.">?</span></span><span class="meta" id="bybcNote"></span></div>
+            <div class="tablewrap"><table class="bt"><thead><tr><th>Would be blocked as</th><th class="n">Domains</th><th class="n">Hits</th><th class="n">% of allowed</th><th class="n">Hidden</th><th class="n">Hidden hits</th></tr></thead><tbody id="bybcRows"></tbody></table></div>
+          </div>
+          <div class="tools">
+            <div class="dd" id="catDD">
+              <button class="btn" type="button" id="catBtn" aria-haspopup="true" aria-expanded="false" aria-controls="catPanel" data-tip="Every category found on your allowed domains, with total hits and domain count. Tick a category to add it to the planned blocks, or untick to remove it.">Categories <span class="ddcount" id="catBtnCount"></span><span aria-hidden="true">▾</span></button>
+              <div class="ddpanel panel" id="catPanel" hidden>
+                <div class="ddhead">
+                  <input class="input" id="catq" type="search" placeholder="Filter categories" aria-label="Filter categories">
+                  <select class="input" id="catsort" aria-label="Sort categories">
+                    <option value="hits">Sort by hits</option>
+                    <option value="doms">Sort by domains</option>
+                    <option value="name">Sort by name</option>
+                  </select>
+                </div>
+                <div class="catlist" id="cats"><div class="empty">Run a lookup to see categories.</div></div>
+                <div class="ddfoot"><button class="btn small" type="button" id="catClear">Clear planned blocks</button><button class="btn small primary" type="button" id="catDone">Done</button></div>
+              </div>
+            </div>
+            <input class="input" id="q" type="search" placeholder="Search domain" aria-label="Search domain">
+            <label data-tip="Show only the surprise matches: affected domains logged under a different category."><input type="checkbox" id="onlyHidden"> Hidden only</label>
+            <label data-tip="Include domains that wouldn&#x27;t be blocked, for browsing or searching the whole log."><input type="checkbox" id="showAll"> Show all domains</label>
+            <label data-tip="Filter to the domains enforced by one URL filtering or cloud app rule.">Enforced by <select class="input" id="polPick" style="max-width:220px"><option value="">Any rule</option></select></label>
+            <label data-tip="Filter by what the enforcing URL filtering rule does: Block, Caution, Allow or Isolate; &#x27;Default rule&#x27; = no rule matched the domain&#x27;s categories; &#x27;Conditional&#x27; = an earlier rule limited to certain users, groups, locations or times also matches.">Action <select class="input" id="actPick" style="max-width:190px"><option value="">Any action</option></select></label>
+            <label data-tip="Hide domains seen fewer times than this, to focus on traffic that matters.">Min hits <input class="input num" id="minHits" type="number" min="1" value="1"></label>
+            <span class="spacer"></span>
+            <button class="btn" type="button" id="copyCsv" data-tip="Copy the rows currently shown (all of them, not just the first 1,000) as CSV, ready to paste into Excel.">Copy table as CSV</button>
+          </div>
+          <div class="tablewrap">
+            <table>
+              <thead><tr>
+                <th scope="col" style="width:34px" data-tip="Exception: tick domains that must keep working. They&#x27;re collected below the table to paste into a custom URL category or allow rule.">Exc</th>
+                <th scope="col" data-k="d">Domain</th>
+                <th scope="col" class="n" data-k="h">Hits</th>
+                <th scope="col" class="n" data-k="u">Users</th>
+                <th scope="col" data-k="b" data-tip="The planned-block category this domain would be blocked under: the first category on your list in Zscaler&#x27;s own category order, which matches what ZIA has been seen to log. Others it also matches are listed after it.">Would be blocked as</th>
+                <th scope="col" data-tip="Every category Zscaler assigns this domain. Outlined = primary (first). Red = a planned block. Blue = one of your custom categories.">Zscaler categories</th>
+                <th scope="col" data-k="l" data-tip="The category the ZIA logs recorded. &#x27;1st&#x27; means the logs used Zscaler&#x27;s primary category. If this isn&#x27;t a planned block but the domain is affected, it&#x27;s a Hidden match.">Logged as</th>
+                <th scope="col" data-k="p" data-tip="The policy that decides this traffic. URL: the URL filtering rule, from the log&#x27;s URL Filtering Rule column when the export has it, otherwise simulated from your URL filtering rules (top-down by rule order, matching the domain&#x27;s categories). &#x27;sim&#x27; = simulated; a warning means an earlier rule with user, group, location or time conditions may apply to some users. Cloud app: the cloud app control rule from the log. SSL, DLP and other rule columns are in the hover text.">Enforced by</th>
+              </tr></thead>
+              <tbody id="rows"><tr><td colspan="8" class="empty">No results loaded.</td></tr></tbody>
+            </table>
+          </div>
+          <div class="foot"><span id="count"></span><span id="pending"></span></div>
+          <div class="excbar" id="excbar" hidden>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between">
+              <b id="excTitle"></b>
+              <div class="actions">
+                <button class="btn" type="button" id="copyExc" data-tip="Copy the exceptions one per line, ready to paste into a custom URL category in ZIA.">Copy as URL list</button>
+                <button class="btn" type="button" id="clearExc">Clear exceptions</button>
+              </div>
+            </div>
+            <textarea class="copybox" id="excBox" readonly aria-label="Exception list"></textarea>
+          </div>
+        </section>
+      </div>
+    </div>
+  </section>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+const TOKEN = "__TOKEN__";
+const BASE = "/impact";
+const $ = id => document.getElementById(id);
+const fmt = n => (n||0).toLocaleString();
+const esc = s => String(s??"").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const size = b => b > 1e9 ? (b/1e9).toFixed(2)+" GB" : b > 1e6 ? (b/1e6).toFixed(1)+" MB" : Math.max(1,Math.round(b/1e3))+" KB";
+const dur = s => s==null ? "–" : s < 60 ? Math.round(s)+"s" : s < 3600 ? Math.floor(s/60)+"m "+String(Math.round(s%60)).padStart(2,"0")+"s" : Math.floor(s/3600)+"h "+Math.round((s%3600)/60)+"m";
+function toast(msg){ const t=$("toast"); t.textContent=msg; t.hidden=false; clearTimeout(toast._t); toast._t=setTimeout(()=>t.hidden=true,2600); }
+function store(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} }
+function recall(k){ try{ return JSON.parse(localStorage.getItem(k)||"null"); }catch(e){ return null; } }
+
+const NOT_SERVED = location.protocol === "file:" || TOKEN.startsWith("__");
+function markStale(){ $("stale").hidden = false; }
+async function api(path, body){
+  if(NOT_SERVED) throw new Error("Open the page through the tool (see the message at the top)");
+  const r = await fetch(path, body === undefined ? {headers:{"X-Token":TOKEN}} :
+    {method:"POST", headers:{"X-Token":TOKEN,"Content-Type":"application/json"}, body:JSON.stringify(body)});
+  let j = null; try{ j = await r.json(); }catch(e){}
+  if(r.status === 403) markStale();
+  if(!r.ok) throw new Error((j && j.error) || `Request failed (${r.status})`);
+  return j;
+}
+
+/* ---------- tabs ---------- */
+function showTab(which){
+  const run = which === "run";
+  $("tabRun").setAttribute("aria-selected", run); $("tabRes").setAttribute("aria-selected", !run);
+  $("viewRun").hidden = !run; $("viewRes").hidden = run;
+  if(!run) $("resDot").hidden = true;
+  updateNext();
+}
+$("tabRun").onclick = () => showTab("run");
+$("tabRes").onclick = () => showTab("res");
+
+/* ---------- files ---------- */
+let FILES = [];
+function renderFiles(){
+  $("files").innerHTML = FILES.map(f => `<div class="file"><span>📄</span><span class="fn">${esc(f.name)}</span><span class="sz">${size(f.size)}</span><button class="x" type="button" data-del="${esc(f.name)}" aria-label="Remove ${esc(f.name)}">×</button></div>`).join("")
+    || `<div class="meta">No files yet.</div>`;
+  $("clearFiles").hidden = FILES.length < 2;
+}
+$("files").addEventListener("click", async e => {
+  const n = e.target.dataset.del; if(!n) return;
+  try{ FILES = (await api(BASE+"/api/delete",{name:n})).files; renderFiles(); }catch(err){ toast(err.message); }
+});
+$("clearFiles").onclick = async () => { try{ FILES = (await api(BASE+"/api/delete",{all:true})).files; renderFiles(); }catch(err){ toast(err.message); } };
+
+function uploadOne(file, i, n){
+  return new Promise((resolve, reject) => {
+    const x = new XMLHttpRequest();
+    x.open("POST", BASE+"/api/upload?name=" + encodeURIComponent(file.name));
+    x.setRequestHeader("X-Token", TOKEN);
+    x.upload.onprogress = e => { if(e.lengthComputable) $("upBar").style.width = (e.loaded/e.total*100).toFixed(1)+"%"; };
+    x.onload = () => { let j={}; try{ j=JSON.parse(x.responseText); }catch(e){}
+      if(x.status===403) markStale();
+      x.status===200 ? resolve(j) : reject(new Error(j.error || `Upload failed (HTTP ${x.status})`)); };
+    x.onerror = () => reject(new Error("Can't reach the tool. Check that zia_impact_gui.py is still running in its terminal window, then reload this page."));
+    $("upLabel").textContent = `Copying ${file.name} (${i}/${n}, ${size(file.size)})`;
+    $("upBar").style.width = "0";
+    x.send(file);
+  });
+}
+const UP_FAILS = [];
+function upFail(file, msg){
+  UP_FAILS.push(`<div><b>${esc(file.name)}</b> (${size(file.size)}): ${esc(msg)}</div>`);
+  const box = $("upErr");
+  box.innerHTML = `<div><b>Upload failed.</b> The tool's terminal window may show more detail.</div>${UP_FAILS.join("")}
+    <div class="meta">Page: ${esc(location.href.split("?")[0])} · ${navigator.userAgent.match(/(Firefox|Edg|Chrome|Safari)\/[\d.]+/)?.[0] || "browser"}</div>
+    <button class="btn small x2" type="button" id="upErrX">Dismiss</button>`;
+  box.hidden = false;
+  $("upErrX").onclick = () => { UP_FAILS.length = 0; box.hidden = true; };
+  try{ fetch(BASE+"/api/clientlog", {method:"POST", headers:{"X-Token":TOKEN,"Content-Type":"application/json"}, body:JSON.stringify({msg:`upload failed: ${file.name} (${file.size} bytes, type '${file.type}'): ${msg}`})}); }catch(e){}
+}
+async function addFiles(list){
+  const files = [...list]; if(!files.length) return;
+  if(NOT_SERVED){ $("notServed").scrollIntoView({behavior:"smooth"}); toast("Open the page through the tool first (see the message at the top)"); return; }
+  $("uploading").hidden = false;
+  for(let i=0;i<files.length;i++){
+    try{ FILES = (await uploadOne(files[i], i+1, files.length)).files; renderFiles(); }
+    catch(err){ upFail(files[i], err.message); }
+  }
+  $("uploading").hidden = true;
+}
+const drop = $("drop");
+drop.onclick = () => $("fileIn").click();
+drop.onkeydown = e => { if(e.key==="Enter"||e.key===" "){ e.preventDefault(); $("fileIn").click(); } };
+$("fileIn").onchange = e => { addFiles(e.target.files); e.target.value=""; };
+$("csvIn").onchange = e => { addFiles(e.target.files); e.target.value=""; };
+["dragenter","dragover"].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.add("over"); }));
+["dragleave","drop"].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.remove("over"); }));
+drop.addEventListener("drop", e => addFiles(e.dataTransfer.files));
+document.addEventListener("dragover", e => e.preventDefault());
+document.addEventListener("drop", e => e.preventDefault());
+
+/* ---------- auth + options ---------- */
+let AUTH = recall("zci:auth") || "oneapi", ENV = {};
+function setAuth(a){
+  AUTH = a; store("zci:auth", a);
+  const has = ENV.oneapi || ENV.legacy;
+  $("envNote").hidden = !has; $("noCreds").hidden = !!has;
+  $("envNote").textContent = has ? ("Connected" + (ENV.vanity ? " to " + ENV.vanity : "") + ". Using the toolkit's shared credentials.") : "";
+}
+
+const OPT_IDS = ["oTenant","oMin","oMax","oAllow","oUrlCol","oActCol","oCatCol","oUserCol","oBase","cVanity","cCloud1","lCloud","lUser"];
+const saved = recall("zci:opts") || {};
+OPT_IDS.forEach(id => { if(saved[id] != null) $(id).value = saved[id]; $(id).addEventListener("change", saveOpts); });
+if(saved.oAllActions) $("oAllActions").checked = true;
+$("oAllActions").addEventListener("change", saveOpts);
+function saveOpts(){ const o={}; OPT_IDS.forEach(id => o[id]=$(id).value); o.oAllActions=$("oAllActions").checked; store("zci:opts", o); }
+
+$("clearCache").onclick = async () => {
+  if($("clearCache").dataset.armed !== "1"){ $("clearCache").dataset.armed="1"; $("clearCache").textContent="Click again to clear"; setTimeout(()=>{ $("clearCache").dataset.armed=""; $("clearCache").textContent="Clear lookup cache"; }, 3500); return; }
+  try{ await api(BASE+"/api/clear-cache",{}); toast("Lookup cache cleared"); refresh(); }catch(err){ toast(err.message); }
+  $("clearCache").dataset.armed=""; $("clearCache").textContent="Clear lookup cache";
+};
+
+/* ---------- run ---------- */
+async function start(mode){
+  if(!FILES.length){ toast("Add at least one log export first"); return; }
+  const body = {
+    mode, auth: ENV.oneapi ? "oneapi" : "legacy", creds: {},
+    options: {tenant_label:$("oTenant").value, min_hits:$("oMin").value, max_lookups:$("oMax").value, allow_pattern:$("oAllow").value,
+      url_column:$("oUrlCol").value, action_column:$("oActCol").value, category_column:$("oCatCol").value, user_column:$("oUserCol").value,
+      base_url:$("oBase").value, all_actions:$("oAllActions").checked}
+  };
+  if(mode==="full" && !(ENV.oneapi || ENV.legacy)){ toast("Add your Zscaler credentials on the dashboard first (or use Dry run)"); return; }
+  try{ renderJob(await api(BASE+"/api/run", body)); poll(); }catch(err){ toast(err.message); }
+}
+$("btnDry").onclick = () => start("dry");
+$("btnRun").onclick = () => start("full");
+$("btnStop").onclick = () => api(BASE+"/api/stop",{}).catch(e=>toast(e.message));
+
+const PHASES = {starting:"Starting", parsing:"Reading logs", auth:"Signing in", catalog:"Reading categories", lookup:"Looking up categories",
+  waiting:"Waiting on rate limit", writing:"Writing results", done:"Finished", stopped:"Stopped", error:"Failed"};
+let lastFinished = null, pollT = null, firstState = true;
+function colWarnings(cols){
+  if(!cols.length) return "";
+  const w = [];
+  if(cols.some(c => !c.category)) w.push("<b>No URL Category column.</b> \"Logged as\" will be empty and Hidden matches can't be detected. Re-export with the <i>URL Category</i> column turned on.");
+  if(cols.some(c => !c.action)) w.push("<b>No Policy Action column.</b> Every row is treated as allowed. Filter the export to allowed traffic, or include <i>Policy Action</i>.");
+  const pol = cols.flatMap(c => c.policy || []);
+  if(!pol.length) w.push("<b>No rule-name columns.</b> The URL filtering rule will be simulated from your rules during the lookup (marked \"sim\"). For the rules ZIA actually applied, include <i>URL Filtering Rule Name</i> and the cloud app policy column in the export.");
+  else if(!pol.some(p => /url\s*filter|cloud|app|firewall|block/i.test(p))) w.push(`<b>Only ${esc([...new Set(pol)].join(", "))} found.</b> That only says the traffic was inspected. During the lookup the tool reads your URL filtering rules and simulates which one enforces each domain (marked "sim"). For the rules ZIA actually applied, and for cloud app rules, add <i>URL Filtering Rule Name</i> and the cloud app policy column to the export.`);
+  return w.length ? `<div class="note warn colwarn">${w.map(x => `<div>⚠ ${x}</div>`).join("")}</div>` : "";
+}
+function renderJob(j){
+  if(!j) return;
+  $("runStatus").hidden = false; $("runHelp").hidden = true;
+  $("phBig").textContent = PHASES[j.phase] || j.phase;
+  const pill = $("phPill");
+  pill.className = "pill " + (j.phase==="done" ? "ok" : j.phase==="error" ? "err" : j.phase==="waiting"||j.phase==="stopped" ? "wait" : "run");
+  pill.textContent = j.mode==="dry" ? "Dry run" : "Lookup";
+  $("phNote").textContent = j.note || "";
+  const pct = j.total ? Math.min(100, j.done/j.total*100) : (j.phase==="done" ? 100 : 0);
+  const indet = j.running && (!j.total || ["auth","catalog","writing","starting"].includes(j.phase));
+  $("bar").classList.toggle("indet", indet);
+  $("barFill").style.width = pct.toFixed(1)+"%";
+  $("kvDone").textContent = j.phase==="lookup"||j.phase==="waiting" ? `${fmt(j.done)} / ${fmt(j.total)}` : j.total ? pct.toFixed(0)+"%" : "–";
+  $("kvEl").textContent = dur(((j.finished || Date.now()/1000) - j.started));
+  $("kvEta").textContent = j.running ? (j.eta!=null ? dur(j.eta) : "–") : "–";
+  $("btnStop").hidden = !j.running; $("btnDry").disabled = $("btnRun").disabled = j.running;
+  const con = $("console"), atBottom = con.scrollTop + con.clientHeight >= con.scrollHeight - 30;
+  con.textContent = (j.log||[]).join("\n") || "…";
+  if(atBottom) con.scrollTop = con.scrollHeight;
+
+  const res = $("runResult");
+  if(!j.running && j.summary){
+    const s = j.summary;
+    const cols = (s.columns||[]).map(c => `<div><b>${esc(c.file)}</b>: URL <code>${esc(c.url)}</code> · action <code>${esc(c.action||"none")}</code> · category <code>${esc(c.category||"none")}</code> · user <code>${esc(c.user||"none")}</code></div>`).join("");
+    const acts = Object.entries(s.actions||{}).map(([k,v]) => `<code>${esc(k)}</code> ${fmt(v)}`).join(" · ");
+    res.hidden = false;
+    res.innerHTML = `<div class="note ok" style="display:grid;gap:6px">
+      <div><b>${fmt(s.rows)}</b> log rows · <b>${fmt(s.kept)}</b> allowed · <b>${fmt(s.included)}</b> unique domains · <b>${fmt(s.looked_up)}</b> with categories${s.pending&&j.mode!=="dry" ? ` · <b>${fmt(s.pending)}</b> still to look up (run again to continue)` : ""}</div>
+      <div class="cols">${cols}</div>
+      ${acts ? `<div class="cols"><span>Action values: ${acts}</span></div>` : ""}
+      ${colWarnings(s.columns||[])}
+      ${j.mode==="dry" ? `<div>Columns look right? Fill in the API section and click <b>Run lookup</b>. If not, set them under <i>Column overrides</i>.</div>` : `<div><button class="btn primary small" type="button" id="goRes">Review impact →</button></div>`}
+    </div>`;
+    const go = $("goRes"); if(go) go.onclick = () => showTab("res");
+  } else if(!j.running && j.error){
+    res.hidden = false; res.innerHTML = `<div class="note err">${esc(j.error)}</div>`;
+  } else res.hidden = true;
+
+  if(!j.running && j.finished !== lastFinished){
+    const fresh = lastFinished !== null || !firstState;
+    lastFinished = j.finished;
+    if(j.summary){ loadServerResults(fresh && j.mode==="full"); }
+  }
+}
+async function refresh(){
+  try{
+    const s = await api(BASE+"/api/state");
+    FILES = s.files; ENV = s.env || {}; renderFiles(); setAuth(AUTH);
+    $("wsMeta").innerHTML = `Lookup cache: <b>${fmt(s.cache)}</b> domains`;
+    $("wsMeta").setAttribute("data-tip", `Uploaded logs, cached lookups and results are kept in ${s.workspace} and reused every time the tool starts.`);
+    $("conn").className = "conn ok"; $("conn").textContent = "Connected";
+    if(firstState){
+      if(s.has_results) loadServerResults(false);
+    }
+    if(s.job) renderJob(s.job);
+    firstState = false;
+    LAST_STATE = s; updateNext();
+    return s;
+  }catch(err){ $("conn").className = "conn bad"; $("conn").textContent = $("stale").hidden ? "Not connected" : "Reload needed"; if(!$("stale").hidden) return null; $("console").textContent = "Lost connection to the tool. Is zia_impact_gui.py still running in its terminal window?\n" + err.message; return null; }
+}
+async function poll(){
+  clearTimeout(pollT);
+  const s = await refresh();
+  pollT = setTimeout(poll, s && s.job && s.job.running ? 1000 : 6000);
+}
+
+/* ---------- results viewer ---------- */
+let DATA = null, CATS = [], TOTAL_HITS = 0, blockSet = new Set(), exc = new Set(), sortK = "h", sortDir = -1;
+const ROW_LIMIT = 1000;
+$("dlCsv").href = BASE+"/download?f=domains.csv&t=" + encodeURIComponent(TOKEN);
+$("dlJson").href = BASE+"/download?f=results.json&t=" + encodeURIComponent(TOKEN);
+
+async function loadServerResults(announce){
+  try{
+    const r = await fetch(BASE+"/api/results", {headers:{"X-Token":TOKEN}});
+    if(!r.ok) return;
+    loadData(await r.json());
+    if(announce){ $("resDot").hidden = false; toast("Results updated. Open Review impact."); }
+  }catch(e){}
+}
+function stateKey(){ return "zci:sel:" + (DATA.meta.tenant||"default"); }
+function saveSel(){ if(DATA) store(stateKey(), {b:[...blockSet], e:[...exc]}); }
+const nk = v => String(v??"").toLowerCase().replace(/[^a-z0-9]/g,"");
+let DOMF = null, POLF = "", BCF = "", ACTF = "";
+function blockedAs(d){
+  const order = [...(d.c||[]), ...(d.x||[]), ...(d.s||[])];
+  const hits = [...new Set(order.filter(c => blockSet.has(c)))];
+  return {first: hits[0] || "", rest: hits.slice(1)};
+}
+function name(id){ return (DATA.names && DATA.names[id]) || String(id).replace(/_/g," ").toLowerCase().replace(/\b\w/g,c=>c.toUpperCase()); }
+
+function loadData(data){
+  if(!data || !Array.isArray(data.domains)){ toast("That isn't a results.json from this tool"); return; }
+  DATA = data;
+  const polTot = new Map(), actTot = new Map();
+  const kinds = DATA.pkinds || {};
+  const kindOf = col => kinds[col] || (/url\s*filter/i.test(col) ? "url" : /cloud\s*app|application control|web application/i.test(col) ? "cloudapp" : /ssl|tls/i.test(col) ? "ssl" : "other");
+  data.domains.forEach(d => {
+    d._all = [...new Set([...(d.c||[]),...(d.s||[]),...(d.x||[])])]; d._l = (d.l||[]).map(nk);
+    d._pol = []; for(const [col, vals] of Object.entries(d.p||{})) for(const [v,n] of vals) d._pol.push({col, v, n, kind: kindOf(col)});
+    const urlLog = d._pol.filter(x => x.kind === "url"), cloud = d._pol.filter(x => x.kind === "cloudapp");
+    d._enf = {url: null, cloud: [...new Set(cloud.map(x => x.v))], other: d._pol.filter(x => x.kind !== "url" && x.kind !== "cloudapp")};
+    if(urlLog.length) d._enf.url = {n: urlLog[0].v, src: "log", more: [...new Set(urlLog.slice(1).map(x=>x.v))]};
+    else if(d.ur) d._enf.url = {n: d.ur.n, a: d.ur.a, o: d.ur.o, pre: d.ur.pre || [], src: "sim"};
+    d._keys = [];
+    if(d._enf.url && d._enf.url.n) d._keys.push("URL: " + d._enf.url.n);
+    if(d._enf.url && !d._enf.url.n) d._keys.push("URL: (no matching rule)");
+    d._enf.cloud.forEach(c => d._keys.push("Cloud app: " + c));
+    d._keys.forEach(k => polTot.set(k, (polTot.get(k)||0) + d.h));
+    d._polKey = d._keys.join(", ");
+    const u = d._enf.url;
+    d._act = !u ? "" : !u.n ? "default" : (u.a ? u.a.toLowerCase() : (u.src === "log" ? "logged" : ""));
+    d._cond = !!(u && u.pre && u.pre.length);
+    if(d._act) actTot.set(d._act, (actTot.get(d._act)||0) + 1);
+    if(d._cond) actTot.set("conditional", (actTot.get("conditional")||0) + 1);
+  });
+  const pp = $("polPick"), cur = pp.value;
+  pp.innerHTML = `<option value="">Any rule</option>` + [...polTot.entries()].sort((a,b)=>b[1]-a[1]).slice(0,300)
+    .map(([k,n]) => `<option value="${esc(k)}">${esc(k)} (${fmt(n)})</option>`).join("") + (polTot.size ? `<option value="__none">No URL or cloud app rule found</option>` : "");
+  pp.value = [...pp.options].some(o=>o.value===cur) ? cur : ""; POLF = pp.value;
+  const ACT_LABEL = {block:"Block", caution:"Caution", allow:"Allow", isolate:"Isolate", default:"Default rule (no match)", logged:"From log (action not recorded)", conditional:"⚠ Conditional match"};
+  const ap = $("actPick"), curA = ap.value;
+  ap.innerHTML = `<option value="">Any action</option>` + ["block","caution","isolate","allow","default","conditional","logged"].filter(k => actTot.has(k))
+    .map(k => `<option value="${k}">${ACT_LABEL[k]} (${fmt(actTot.get(k))})</option>`).join("");
+  ap.value = [...ap.options].some(o=>o.value===curA) ? curA : ""; ACTF = ap.value; ap.disabled = actTot.size === 0;
+  pp.disabled = polTot.size === 0; pp.title = polTot.size ? "" : "No URL filtering or cloud app rule is known: the export has no such columns and the URL filtering rules couldn't be read";
+  TOTAL_HITS = data.domains.reduce((a,d)=>a+d.h,0);
+  const m = new Map();
+  for(const d of data.domains) for(const c of d._all){ const e=m.get(c)||{id:c,doms:0,hits:0}; e.doms++; e.hits+=d.h; m.set(c,e); }
+  const customIds = new Set((data.custom||[]).map(c=>c.id));
+  CATS = [...m.values()].map(e => ({...e, nm:name(e.id), custom:customIds.has(e.id)}));
+  const st = recall(stateKey());           // keep planned blocks + exceptions across reruns for the same tenant
+  blockSet = new Set(st ? st.b : []);
+  exc = new Set(st ? st.e : []);
+  const mt = data.meta||{};
+  $("resMeta").innerHTML = [mt.tenant ? `<b>${esc(mt.tenant)}</b>` : "", `${fmt(mt.included||data.domains.length)} domains from ${fmt(mt.kept)} allowed log rows`,
+    mt.files ? `${mt.files.length} file${mt.files.length===1?"":"s"}` : "", mt.generated ? `generated ${esc(mt.generated.replace("T"," ").slice(0,16))} UTC` : ""].filter(Boolean).join(" · ");
+  renderCats(); render();
+}
+function renderCats(){
+  $("catBtnCount").textContent = blockSet.size ? `${blockSet.size} planned` : "";
+  if(!DATA) return;
+  const q = $("catq").value.trim().toLowerCase(), s = $("catsort").value;
+  const max = Math.max(1, ...CATS.map(c=>c.hits));
+  const list = CATS.filter(c => !q || c.nm.toLowerCase().includes(q) || c.id.toLowerCase().includes(q))
+    .sort((a,b) => (blockSet.has(b.id)-blockSet.has(a.id)) || (s==="name" ? a.nm.localeCompare(b.nm) : s==="doms" ? b.doms-a.doms : b.hits-a.hits));
+  $("cats").innerHTML = list.length ? list.map(c => `
+    <label class="cat${blockSet.has(c.id)?" on":""}">
+      <input type="checkbox" data-id="${esc(c.id)}" ${blockSet.has(c.id)?"checked":""}>
+      <span class="nm">${esc(c.nm)}${c.custom?'<span class="custom-badge">custom</span>':""}<small>${esc(c.id)}</small>${DATA.supers && DATA.supers[c.id] ? `<span class="sup">Super: ${esc(name(DATA.supers[c.id]))}</span>` : ""}</span>
+      <span class="ct"><b>${fmt(c.hits)}</b> hits<br>${fmt(c.doms)} dom</span>
+      <span class="cb"><i style="width:${(c.hits/max*100).toFixed(1)}%"></i></span>
+    </label>`).join("") : `<div class="empty">${CATS.length ? "No categories match." : "No categories yet. Run the lookup (a dry run doesn't fetch categories)."}</div>`;
+}
+function isHidden(d){
+  if(!d._l.length) return false;
+  const names = new Set([...blockSet].flatMap(id => [nk(name(id)), nk(id)]));
+  return !d._l.some(l => names.has(l));
+}
+function currentRows(){
+  const q = $("q").value.trim().toLowerCase(), minH = Math.max(1, +$("minHits").value || 1);
+  const showAll = $("showAll").checked || blockSet.size === 0, onlyHid = $("onlyHidden").checked;
+  const rows = DATA.domains.filter(d => {
+    if(d.h < minH || (q && !d.d.includes(q))) return false;
+    if(DOMF && !DOMF.some(f => d.d === f || d.d.endsWith("." + f))) return false;
+    if(POLF && (POLF === "__none" ? d._keys.length : !d._keys.includes(POLF))) return false;
+    if(ACTF && (ACTF === "conditional" ? !d._cond : d._act !== ACTF)) return false;
+    d._hit = d._all.some(c => blockSet.has(c)); d._hid = d._hit && isHidden(d);
+    d._ba = d._hit ? blockedAs(d) : {first:"", rest:[]};
+    if(BCF && d._ba.first !== BCF) return false;
+    if(!showAll && !d._hit) return false;
+    if(onlyHid && !d._hid) return false;
+    return true;
+  });
+  const key = r => sortK==="hid" ? (r._hid?2:r._hit?1:0) : sortK==="l" ? (r.l||[])[0]||"" : sortK==="p" ? (({block:0,caution:1,isolate:2,default:3,allow:4}[r._act] ?? 5) + ":" + r._polKey) : sortK==="b" ? (r._ba.first ? name(r._ba.first) : "") : r[sortK];
+  rows.sort((a,b) => { const x=key(a), y=key(b); return (x>y?1:x<y?-1:0)*sortDir || b.h-a.h; });
+  return rows;
+}
+function render(){
+  if(!DATA) return;
+  setTimeout(updateNext, 0);
+  let dN=0,hN=0,xN=0,uMax=0,xHits=0;
+  for(const d of DATA.domains){
+    if(!d._all.some(c => blockSet.has(c))) continue;
+    dN++; hN+=d.h; uMax=Math.max(uMax,d.u||0);
+    if(isHidden(d)){ xN++; xHits+=d.h; }
+  }
+  $("sD").textContent = fmt(dN); $("sDs").textContent = blockSet.size ? `of ${fmt(DATA.domains.length)} allowed domains` : "pick a category";
+  $("sH").textContent = fmt(hN); $("sHs").textContent = TOTAL_HITS ? `${(hN/TOTAL_HITS*100).toFixed(1)}% of allowed traffic` : "";
+  $("sX").textContent = fmt(xN); $("sXs").textContent = xN ? `${fmt(xHits)} hits logged as another category` : "logged as another category";
+  $("sU").textContent = fmt(uMax);
+  // breakdown by the category each affected domain would be blocked as
+  const by = new Map();
+  for(const d of DATA.domains){
+    if(!d._all.some(c => blockSet.has(c))) continue;
+    const ba = blockedAs(d).first, hid = isHidden(d);
+    const e = by.get(ba) || {id:ba, doms:0, hits:0, hid:0, hidHits:0};
+    e.doms++; e.hits += d.h; if(hid){ e.hid++; e.hidHits += d.h; } by.set(ba, e);
+  }
+  if(BCF && !by.has(BCF)) BCF = "";
+  const list = [...by.values()].sort((a,b) => b.hits - a.hits), maxB = Math.max(1, ...list.map(x=>x.hits));
+  $("bybc").hidden = list.length === 0;
+  const quietCats = [...blockSet].filter(id => !by.has(id)).length;
+  $("bybcNote").textContent = (BCF ? `Table filtered to ${name(BCF)}. ` : "") + (quietCats ? `${quietCats} planned categor${quietCats===1?"y isn't":"ies aren't"} the blocking category for any domain here (some may still show under "also").` : "");
+  $("bybcRows").innerHTML = list.map(e => `<tr data-bc="${esc(e.id)}" class="${e.id===BCF?"sel":""}">
+    <td><span class="chip b">${esc(name(e.id))}</span></td><td class="n">${fmt(e.doms)}</td>
+    <td class="n">${fmt(e.hits)}<span class="bshare"><i style="width:${(e.hits/maxB*100).toFixed(1)}%"></i></span></td>
+    <td class="n">${TOTAL_HITS ? (e.hits/TOTAL_HITS*100).toFixed(1)+"%" : "–"}</td>
+    <td class="n">${e.hid ? `<span class="flag hid">${fmt(e.hid)}</span>` : "0"}</td><td class="n">${fmt(e.hidHits)}</td></tr>`).join("");
+  $("blocking").innerHTML = blockSet.size
+    ? `<span class="lbl">Planned blocks</span>` + [...blockSet].map(id => `<span class="chip b">${esc(name(id))}<button type="button" data-unblock="${esc(id)}" aria-label="Remove ${esc(name(id))}">×</button></span>`).join("")
+    : `<span class="lbl">No planned blocks yet. Evaluate a list above or tick categories in the Categories menu; the table shows all domains until you do.</span>`;
+  const rows = currentRows(), maxH = Math.max(1, ...rows.slice(0,ROW_LIMIT).map(r=>r.h));
+  document.querySelectorAll("th[data-k]").forEach(th => th.dataset.k===sortK ? th.setAttribute("aria-sort", sortDir>0?"ascending":"descending") : th.removeAttribute("aria-sort"));
+  $("rows").innerHTML = rows.length ? rows.slice(0,ROW_LIMIT).map(d => {
+    const first = (d.c||[])[0];
+    const chips = d.k || d._all.length ? d._all.map(c => {
+      const cls = (blockSet.has(c) ? "b" : (d.x||[]).includes(c) ? "x" : (d.s||[]).includes(c) ? "s" : "") + (c===first ? " p1" : "");
+      const sup = DATA.supers && DATA.supers[c] ? ` · super: ${name(DATA.supers[c])}` : "";
+      const tip = `${c}${c===first ? " · primary (first) category" : ""}${(d.x||[]).includes(c) ? " · custom category" : ""}${sup}`;
+      return `<span class="chip ${cls}" title="${esc(tip)}">${esc(name(c))}</span>`; }).join("") : d.z ? `<span class="flag pend" data-tip="Zscaler's lookup doesn't accept this hostname format (for example a wildcard like _.example.com), so it has no categories. Check it by hand if it matters.">can't be looked up</span>` : `<span class="flag pend">not looked up yet</span>`;
+    const loggedPrimary = first && d._l.length && (d._l[0] === nk(name(first)) || d._l[0] === nk(first));
+    const pol = enforcerCell(d);
+    const status = !d._hit ? "" : d._hid ? `<span class="flag hid">Hidden</span>` : `<span class="flag vis">Expected</span>`;
+    return `<tr class="${exc.has(d.d)?"exc":""}">
+      <td><input type="checkbox" data-exc="${esc(d.d)}" ${exc.has(d.d)?"checked":""} aria-label="Exception for ${esc(d.d)}"></td>
+      <td class="d">${esc(d.d)}${status ? `<div style="margin-top:3px">${status}</div>` : ""}</td>
+      <td class="n">${fmt(d.h)}<span class="hitbar"><i style="width:${(d.h/maxH*100).toFixed(1)}%"></i></span></td>
+      <td class="n">${fmt(d.u)}</td>
+      <td>${d._ba.first ? `<span class="chip b">${esc(name(d._ba.first))}</span>${d._ba.rest.length ? `<div class="also" title="${esc(d._ba.rest.map(name).join(", "))}">also ${esc(d._ba.rest.map(name).join(", "))}</div>` : ""}` : "–"}</td>
+      <td><div class="chips">${chips}</div></td>
+      <td>${esc((d.l||[]).join(", ")) || "–"}${loggedPrimary ? `<span class="flag prim" title="The logs used ZIA's first (primary) category for this domain">1st</span>` : ""}</td>
+      <td><div class="chips">${pol}</div></td></tr>`;
+  }).join("") : `<tr><td colspan="8" class="empty">${blockSet.size ? "Nothing in the allowed logs carries these categories with the current filters." : "No domains match."}</td></tr>`;
+  $("count").textContent = rows.length > ROW_LIMIT ? `Showing top ${fmt(ROW_LIMIT)} of ${fmt(rows.length)} rows by current sort. Narrow with search or min hits.` : `${fmt(rows.length)} row${rows.length===1?"":"s"}`;
+  const pend = DATA.domains.filter(d=>!d.k).length;
+  $("pending").textContent = pend ? `${fmt(pend)} domains not looked up yet` : "";
+  $("excbar").hidden = exc.size === 0;
+  $("excTitle").textContent = `${fmt(exc.size)} exception${exc.size===1?"":"s"} marked`;
+  $("excBox").value = [...exc].sort().join("\n");
+}
+async function copy(text, label, el){
+  try{ await navigator.clipboard.writeText(text); toast(label + " copied"); }
+  catch(e){ if(el){ el.focus(); el.select(); } toast("Clipboard blocked. Text selected; press Ctrl+C / ⌘C."); }
+}
+const csvCell = v => { v=String(v??""); return /[",\n]/.test(v) ? '"'+v.replace(/"/g,'""')+'"' : v; };
+
+$("cats").addEventListener("change", e => { const id=e.target.dataset.id; if(!id) return; e.target.checked?blockSet.add(id):blockSet.delete(id); saveSel(); renderCats(); render(); });
+$("blocking").addEventListener("click", e => { const id=e.target.dataset.unblock; if(!id) return; blockSet.delete(id); saveSel(); renderCats(); render(); });
+$("rows").addEventListener("change", e => {
+  const d=e.target.dataset.exc; if(!d) return; e.target.checked?exc.add(d):exc.delete(d);
+  e.target.closest("tr").classList.toggle("exc", e.target.checked); saveSel();
+  $("excbar").hidden = exc.size===0; $("excTitle").textContent = `${fmt(exc.size)} exception${exc.size===1?"":"s"} marked`; $("excBox").value=[...exc].sort().join("\n");
+});
+document.querySelectorAll("th[data-k]").forEach(th => th.addEventListener("click", () => {
+  const k=th.dataset.k; if(sortK===k) sortDir*=-1; else { sortK=k; sortDir=(k==="d"||k==="l")?1:-1; } render();
+}));
+["q","minHits","onlyHidden","showAll"].forEach(id => $(id).addEventListener("input", render));
+$("bybcRows").addEventListener("click", e => { const tr = e.target.closest("tr[data-bc]"); if(!tr) return; BCF = BCF === tr.dataset.bc ? "" : tr.dataset.bc; render(); });
+$("polPick").addEventListener("change", e => { POLF = e.target.value; render(); });
+$("actPick").addEventListener("change", e => { ACTF = e.target.value; render(); });
+$("rows").addEventListener("click", e => {
+  const chip = e.target.closest("[data-polkey]"); if(!chip) return;
+  const k = chip.dataset.polkey, pp = $("polPick");
+  POLF = POLF === k ? "" : k; pp.value = [...pp.options].some(o => o.value === POLF) ? POLF : ""; render();
+});
+function enforcerCell(d){
+  const e = d._enf || {url:null, cloud:[], other:[]}, parts = [];
+  const otherTip = e.other.length ? "Other rule columns in the log: " + e.other.map(x => `${x.col}: ${x.v}`).join("; ") : "";
+  if(e.url){
+    const u = e.url;
+    if(u.n){
+      const act = u.a ? `<b class="act act-${esc(u.a.toLowerCase())}">${esc(u.a.toLowerCase())}</b>` : "";
+      const tip = u.src === "log" ? `URL filtering rule recorded in the log${u.more && u.more.length ? "; also seen: " + u.more.join(", ") : ""}.`
+        : `Simulated: the first enabled URL filtering rule (#${u.o}) whose categories match this domain.` + (u.pre && u.pre.length ? ` Earlier rules with conditions also match: ${u.pre.map(p => `${p.n} (#${p.o}, ${p.a.toLowerCase()}, if ${p.w.join(", ")})`).join("; ")}. Those apply instead for the users or locations they cover.` : "");
+      parts.push(`<span class="chip pol" data-polkey="${esc("URL: " + u.n)}" data-tip="${esc(tip + (otherTip ? " " + otherTip : "") + " Click to show only this rule.")}"><i>URL${u.src === "sim" ? " · sim" : ""}</i>${esc(u.n)}${act}</span>` + (u.pre && u.pre.length ? `<span class="flag hid" data-tip="${esc(tip)}">⚠ conditional</span>` : ""));
+    } else {
+      parts.push(`<span class="chip pol" data-polkey="URL: (no matching rule)" data-tip="${esc("No enabled URL filtering rule matches this domain's categories, so the default URL filtering rule applies." + (u.pre && u.pre.length ? " Conditional rules that match for some users: " + u.pre.map(p => p.n).join(", ") : ""))}"><i>URL · sim</i>default rule</span>`);
+    }
+  }
+  e.cloud.forEach(c => parts.push(`<span class="chip pol cloud" data-polkey="${esc("Cloud app: " + c)}" data-tip="${esc("Cloud app control rule recorded in the log." + (otherTip ? " " + otherTip : "") + " Click to show only this rule.")}"><i>Cloud app</i>${esc(c)}</span>`));
+  if(!parts.length) return e.other.length ? `<span class="meta" data-tip="${esc(otherTip + ". The export has no URL filtering or cloud app rule column, and the URL filtering rules weren't read from the API.")}">only ${esc(shortCol(e.other[0].col))} ⓘ</span>` : "–";
+  return parts.join("");
+}
+function shortCol(c){ return c.replace(/\b(name|policy|rule)\b/gi,"").replace(/\s+/g," ").trim() || c; }
+
+/* ---------- saved category lists ---------- */
+const DEFAULT_SETS = {"High-risk categories (example)": `Other Adult Material
+Adult Themes
+Lingerie/Bikini
+Nudity
+Pornography
+Body Art
+Adult Sex Education
+K-12 Sex Education
+Gambling
+Other Illegal or Questionable
+Copyright Infringement
+Computer Hacking
+Questionable
+Profanity
+Mature Humor
+Anonymizer
+FileHost
+Shareware Download
+Webmail
+Militancy/Hate and Extremism
+Other Miscellaneous
+Tasteless
+Violence
+Spyware/Adware
+Peer-to-Peer Site
+Miscellaneous or Unknown
+Social Networking Adult
+Newly Registered and Observed Domains
+Non Categorizable
+Custom Encrypted Content
+DNS Over HTTPS Services
+Dynamic DNS Host
+Newly Revived Domains
+Generative AI and ML Applications
+File Convertors
+General AI & ML Applications`};
+let SETS = recall("zci:sets");
+if(!SETS){ SETS = {...DEFAULT_SETS}; store("zci:sets", SETS); }
+function renderSets(sel){
+  const names = Object.keys(SETS);
+  $("setPick").innerHTML = `<option value="">Unsaved list</option>` + names.map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join("");
+  $("setPick").value = sel != null && SETS[sel] != null ? sel : "";
+  $("setDel").disabled = !$("setPick").value;
+}
+$("setPick").onchange = e => { const n = e.target.value; if(n){ $("setText").value = SETS[n]; store("zci:lastset", n); } $("setDel").disabled = !n; $("setReport").hidden = true; };
+$("setSave").onclick = () => { $("saveRow").hidden = false; $("setName").value = $("setPick").value || ""; $("setName").focus(); };
+$("setSaveOk").onclick = () => {
+  const n = $("setName").value.trim(); if(!n){ toast("Give the list a name"); return; }
+  SETS[n] = $("setText").value; store("zci:sets", SETS); store("zci:lastset", n); renderSets(n); $("saveRow").hidden = true; toast(`Saved "${n}"`);
+};
+$("setName").addEventListener("keydown", e => { if(e.key==="Enter") $("setSaveOk").click(); });
+$("setDel").onclick = () => {
+  const n = $("setPick").value; if(!n) return;
+  if($("setDel").dataset.armed !== "1"){ $("setDel").dataset.armed="1"; $("setDel").textContent="Click again to delete"; setTimeout(()=>{ $("setDel").dataset.armed=""; $("setDel").textContent="Delete"; }, 3500); return; }
+  delete SETS[n]; store("zci:sets", SETS); renderSets(""); $("setDel").dataset.armed=""; $("setDel").textContent="Delete"; toast(`Deleted "${n}"`);
+};
+function resolveList(text){
+  const lines = text.split(/[\n,;]+/).map(t => t.trim()).filter(Boolean);
+  const index = new Map(), push = (k, id) => { if(!k) return; if(!index.has(k)) index.set(k, new Set()); index.get(k).add(id); };
+  const all = new Set([...Object.keys(DATA.names||{}), ...CATS.map(c=>c.id)]);
+  for(const id of all){ push(nk(id), id); push(nk(name(id)), id); }
+  for(const [id, sup] of Object.entries(DATA.supers||{})){ push(nk(sup), id); push(nk(name(sup)), id); }
+  const traffic = new Set(CATS.map(c=>c.id)), hit = new Set(), quiet = [], unknown = [];
+  for(const t of lines){
+    const ids = index.get(nk(t));
+    if(!ids){ unknown.push(t); continue; }
+    const withTraffic = [...ids].filter(id => traffic.has(id));
+    withTraffic.forEach(id => hit.add(id));
+    if(!withTraffic.length) quiet.push(t);
+  }
+  return {lines, hit, quiet, unknown};
+}
+$("setApply").onclick = () => {
+  if(!DATA){ toast("Run a lookup first"); return; }
+  const r = resolveList($("setText").value);
+  if(!r.lines.length){ toast("Add at least one category"); return; }
+  blockSet = new Set(r.hit); saveSel(); renderCats(); render();
+  const chipList = (arr, cls) => arr.map(x => `<span class="chip ${cls}">${esc(x)}</span>`).join("");
+  $("setReport").innerHTML = `
+    <div class="grp"><span>In your allowed traffic (${r.hit.size})</span>${chipList([...r.hit].map(name), "b") || '<span class="meta">none</span>'}</div>
+    ${r.quiet.length ? `<div class="grp"><span>No allowed traffic (${r.quiet.length})</span>${chipList(r.quiet, "")}</div>` : ""}
+    ${r.unknown.length ? `<div class="grp"><span>Not recognized (${r.unknown.length})</span>${chipList(r.unknown, "s")}<span class="meta">Check the spelling, or run a full lookup so the tool has Zscaler's category list.</span></div>` : ""}`;
+  if(!DATA.domains.some(d => d.k)) $("setReport").innerHTML = `<div class="note warn">These results come from a <b>dry run</b>, so the tool doesn't have Zscaler's categories yet and can't match this list. Run the lookup first (tab 1, box B, then <b>Run lookup</b>).</div>`;
+  $("setReport").hidden = false;
+};
+function evMode(m){
+  $("evCatsBtn").setAttribute("aria-pressed", m==="cats"); $("evDomsBtn").setAttribute("aria-pressed", m==="doms");
+  $("evCats").hidden = m!=="cats"; $("evDoms").hidden = m!=="doms";
+}
+$("evCatsBtn").onclick = () => evMode("cats");
+$("evDomsBtn").onclick = () => evMode("doms");
+$("domApply").onclick = () => {
+  if(!DATA){ toast("Run a lookup first"); return; }
+  const list = [...new Set($("domText").value.split(/[\s,;]+/).map(t => (t.match(/^[a-z]+:\/\//i) ? t.replace(/^[a-z]+:\/\//i,"") : t).split("/")[0].replace(/^\*?\./,"").toLowerCase()).filter(Boolean))];
+  if(!list.length){ toast("Add at least one domain"); return; }
+  DOMF = list; $("showAll").checked = true;
+  const found = list.filter(f => DATA.domains.some(d => d.d === f || d.d.endsWith("." + f)));
+  const missing = list.filter(f => !found.includes(f));
+  $("domReport").textContent = `${found.length} of ${list.length} found in the allowed logs` + (missing.length ? `. Not seen: ${missing.slice(0,8).join(", ")}${missing.length>8?"…":""}` : "");
+  render();
+};
+$("domClear").onclick = () => { DOMF = null; $("domReport").textContent = ""; render(); };
+renderSets(recall("zci:lastset"));
+$("setText").value = SETS[$("setPick").value] || SETS[Object.keys(SETS)[0]] || "";
+if(!$("setPick").value && Object.keys(SETS).length){ renderSets(Object.keys(SETS)[0]); $("setText").value = SETS[Object.keys(SETS)[0]]; }
+["catq","catsort"].forEach(id => $(id).addEventListener("input", renderCats));
+$("clearExc").onclick = () => { exc.clear(); saveSel(); render(); };
+$("copyExc").onclick = () => copy([...exc].sort().join("\n"), "Exception list", $("excBox"));
+$("copyCsv").onclick = () => {
+  if(!DATA) return;
+  const rows = currentRows();
+  const lines = [["fqdn","hits","users","zscaler_categories","super_categories","would_be_blocked_as","also_matches_planned_block","logged_as","url_filtering_rule","url_rule_source","cloud_app_rule","other_policy_columns","hidden","exception"].join(",")]
+    .concat(rows.map(d => [d.d,d.h,d.u,d._all.map(name).join("; "),[...new Set(d._all.map(c=>DATA.supers&&DATA.supers[c]).filter(Boolean))].map(name).join("; "),(d._ba.first ? name(d._ba.first) : ""),d._ba.rest.map(name).join("; "),(d.l||[]).join("; "),(d._enf && d._enf.url ? (d._enf.url.n || "default rule") + (d._enf.url.a ? ` (${d._enf.url.a.toLowerCase()})` : "") : ""),(d._enf && d._enf.url ? (d._enf.url.src === "sim" ? "simulated" : "log") : ""),(d._enf ? d._enf.cloud.join("; ") : ""),(d._enf ? d._enf.other.map(x => `${x.col}: ${x.v}`).join("; ") : ""),d._hid?"yes":"no",exc.has(d.d)?"yes":"no"].map(csvCell).join(",")));
+  copy(lines.join("\n"), `${fmt(rows.length)} rows`, null);
+};
+$("resFile").onchange = e => {
+  const f=e.target.files[0]; if(!f) return; const r=new FileReader();
+  r.onload = () => { try{ loadData(JSON.parse(r.result)); toast(`Opened ${f.name}`); }catch(err){ toast("Couldn't read that file as JSON"); } };
+  r.readAsText(f); e.target.value="";
+};
+
+/* ---------- hover help ---------- */
+const tipBox = document.createElement("div"); tipBox.id = "tipBox"; tipBox.hidden = true; tipBox.setAttribute("role","tooltip"); document.body.appendChild(tipBox);
+function showTip(el){
+  const t = el.getAttribute("data-tip"); if(!t) return;
+  tipBox.textContent = t; tipBox.hidden = false;
+  const r = el.getBoundingClientRect(), b = tipBox.getBoundingClientRect();
+  let x = Math.min(Math.max(8, r.left + r.width/2 - b.width/2), innerWidth - b.width - 8);
+  let y = r.bottom + 8; if(y + b.height > innerHeight - 8) y = r.top - b.height - 8;
+  tipBox.style.left = x + "px"; tipBox.style.top = Math.max(8, y) + "px";
+}
+const hideTip = () => { tipBox.hidden = true; };
+document.addEventListener("mouseover", e => { const el = e.target.closest("[data-tip]"); el ? showTip(el) : hideTip(); });
+document.addEventListener("focusin", e => { const el = e.target.closest("[data-tip]"); if(el) showTip(el); });
+document.addEventListener("focusout", hideTip);
+document.addEventListener("scroll", hideTip, true);
+document.addEventListener("keydown", e => { if(e.key === "Escape") hideTip(); });
+
+
+/* ---------- next-step banner ---------- */
+let LAST_STATE = null;
+function setNext(kind, lead, html, btn){
+  const n = $("next"); n.hidden = false; n.className = "next" + (kind === "warn" ? " warn" : "");
+  n.innerHTML = `<span class="lead">${lead}</span><span>${html}</span>` + (btn ? `<button class="btn primary small" type="button" id="nextBtn">${btn.label}</button>` : "");
+  if(btn) $("nextBtn").onclick = btn.go;
+}
+function updateNext(){
+  if(NOT_SERVED){ $("next").hidden = true; return; }
+  const s = LAST_STATE; if(!s) return;
+  const j = s.job, onRes = !$("viewRes").hidden;
+  const looked = DATA ? DATA.domains.some(d => d.k) : false;
+  if(j && j.running){ setNext("", "Working", j.mode === "dry" ? "Reading the log files…" : "Looking up categories. You can watch progress in the Run panel; it's safe to leave this tab open and come back."); return; }
+  if(onRes){
+    if(!DATA){ setNext("warn", "No results yet", "Results appear here after a lookup. Go to <b>Run lookup</b>, add your log export, then click <b>Run lookup</b>.", {label:"Go to Run lookup", go:()=>showTab("run")}); return; }
+    if(!looked){ setNext("warn", "Categories missing", "These results are from a <b>dry run</b>, which doesn't contact Zscaler, so no domain has categories yet and nothing can be evaluated. Enter API credentials on the Run lookup tab and click <b>Run lookup</b>.", {label:"Go to Run lookup", go:()=>showTab("run")}); return; }
+    const pend = DATA.domains.filter(d => !d.k).length;
+    if(blockSet.size === 0){ setNext("", "Step 4", "Pick a saved list and click <b>Evaluate list</b>, or tick categories in the <b>Categories</b> menu. Then review the <b>Hidden</b> rows and tick <b>Exc</b> on anything that must keep working." + (pend ? ` <span class="meta">(${fmt(pend)} domains still to look up; run the lookup again to finish.)</span>` : "")); return; }
+    $("next").hidden = true; return;
+  }
+  if(!s.files.length){ setNext("", "Step 1", "Export allowed web logs from ZIA (steps in <a class=\"link\" href=\"/help#impact\">How to use</a>) and drop the CSV into box A, or add it to the library on the dashboard."); return; }
+  if(!j){ setNext("", "Step 2", "Click <b>Dry run</b> to check the files. It's quick and doesn't need Zscaler credentials.", {label:"Dry run", go:()=>start("dry")}); return; }
+  if(j.phase === "error"){ setNext("warn", "Fix and retry", esc(j.error || "The last run failed.") + " See the log in the Run panel."); return; }
+  if(j.phase === "stopped"){ setNext("", "Paused", "The lookup was stopped. Click <b>Run lookup</b> to continue from where it left off.", {label:"Run lookup", go:()=>start("full")}); return; }
+  if(j.mode === "dry"){ setNext("", "Step 3", "Check the columns the dry run found (and any warnings) in the Run panel. Then enter Zscaler API credentials in box B and click <b>Run lookup</b>."); return; }
+  if(j.summary && j.summary.pending){ setNext("", "Almost there", `${fmt(j.summary.pending)} domains still need categories (Zscaler's hourly limit or the "Look up at most" option). Run again to finish, or review now with what's done.`, {label:"Review impact", go:()=>showTab("res")}); return; }
+  setNext("", "Step 4", "Lookup finished. Open <b>Review impact</b>, pick a category list and click <b>Evaluate list</b>.", {label:"Review impact", go:()=>showTab("res")});
+}
+
+/* ---------- categories dropdown ---------- */
+function catOpen(open){
+  $("catPanel").hidden = !open; $("catBtn").setAttribute("aria-expanded", open);
+  if(open){ hideTip(); $("catq").focus(); }
+}
+$("catBtn").onclick = () => catOpen($("catPanel").hidden);
+$("catDone").onclick = () => catOpen(false);
+$("catClear").onclick = () => { blockSet.clear(); saveSel(); renderCats(); render(); };
+document.addEventListener("click", e => { if(!$("catPanel").hidden && !e.target.closest("#catDD")) catOpen(false); });
+document.addEventListener("keydown", e => { if(e.key === "Escape" && !$("catPanel").hidden){ catOpen(false); $("catBtn").focus(); } });
+
+setAuth(AUTH);
+if(NOT_SERVED){ $("notServed").hidden = false; $("console").textContent = "Not connected to the tool."; $("conn").className = "conn bad"; $("conn").textContent = "Not connected"; }
+else poll();
+</script>
+</body>
+</html>
