@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Starts the ZIA Toolkit: Web Insights Portal on one port (5055) (first run installs what it needs).
+# Starts the ZIA Toolkit dashboard at http://127.0.0.1:5055 (first run installs what it needs).
 set -e
 cd "$(dirname "$0")"
 PY=${PYTHON:-python3}
