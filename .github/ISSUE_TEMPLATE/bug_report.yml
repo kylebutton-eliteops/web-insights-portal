@@ -1,0 +1,39 @@
+name: Bug report
+description: Something in the portal or the command-line script doesn't work
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Issues are public. Do not attach exports or output files, and do not paste credentials, tenant names or internal hostnames.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What you did, what you expected, and what happened instead. Include the error message.
+    validations:
+      required: true
+  - type: textarea
+    id: columns
+    attributes:
+      label: Export columns
+      description: The header row of your Web Insights export (column names only, no data rows).
+  - type: dropdown
+    id: api
+    attributes:
+      label: Was the OneAPI category lookup turned on?
+      options: ["No", "Yes", "Not sure"]
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Operating system and Python version
+      placeholder: "e.g. macOS 15, Python 3.12"
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacy check
+      options:
+        - label: This report contains no export data, credentials, tenant names or internal hostnames.
+          required: true

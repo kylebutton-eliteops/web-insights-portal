@@ -66,6 +66,10 @@ Zscaler's built-in categories only; tenant custom categories come from the logs.
 - `HELP.html`: standalone copy of the How to use page (opens without the app running)
 - `zia_category_names.json`: category ID → console display name (the API only returns IDs)
 
+## Issues and contributing
+
+Found a bug or want a feature? Open an [issue](../../issues/new/choose). Outside pull requests aren't accepted; see [CONTRIBUTING.md](CONTRIBUTING.md). Keep exports, credentials and tenant names out of issues.
+
 ## License
 
 MIT. See [LICENSE](LICENSE).
