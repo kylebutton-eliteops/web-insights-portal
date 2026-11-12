@@ -42,7 +42,7 @@ What's there:
 The Sheets connector can't take a few thousand wide rows in one write (about 40 KB per call is the practical limit). For big tables: produce a CSV/xlsx, have the person import it as a new tab (File -> Import -> Insert new sheet), then add columns elsewhere as lookup formulas (`VLOOKUP` / `INDEX-MATCH` on Host) and summary tabs as `COUNTIF` / `SUMIFS` over the host tab. Small lookup tables (under about 1,000 short rows) can be written directly in two or three calls. Change the person's existing sheet in place; keep the same link.
 
 ## Customer data
-The raw export contains user names/emails, departments and internal hostnames. Keep it in the scratchpad, never in the repo or in memory. Outputs carry counts only (unique users, departments), no user names. The portal deletes the upload after processing unless "Keep" is ticked.
+The raw export contains user names/emails, departments and internal hostnames. Keep it in the scratchpad, never in the repo or in memory. Outputs carry counts only (unique users, departments), no user names. In the toolkit, exports stay in the dashboard's library until the person removes them, so remind them to clear it when done.
 
 ## Problems with the tool
-If the portal or script misbehaves, help the person open an issue at https://github.com/kylebutton-eliteops/web-insights-portal/issues. Issues are public: no exports, output files, credentials, tenant names or internal hostnames in them.
+If the toolkit or script misbehaves, help the person open an issue at https://github.com/kylebutton-eliteops/web-insights-portal/issues. Issues are public: no exports, output files, credentials, tenant names or internal hostnames in them.
