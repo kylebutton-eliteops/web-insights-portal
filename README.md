@@ -66,6 +66,18 @@ Zscaler's built-in categories only; tenant custom categories come from the logs.
 - `HELP.html`: standalone copy of the How to use page (opens without the app running)
 - `zia_category_names.json`: category ID → console display name (the API only returns IDs)
 
+## Claude skill
+
+`skill/zia-web-insights-categorize.zip` is a Claude skill that teaches Claude this workflow, so you can hand it a
+Web Insights export and ask for the breakdown in plain words.
+
+1. Download [zia-web-insights-categorize.zip](skill/zia-web-insights-categorize.zip) (use the download button on that page).
+2. In Claude, go to **Customize > Skills**, click **+**, then **Create skill**, then **Upload a skill**, and pick the zip.
+3. Turn the skill on with the switch next to it.
+
+Skills need code execution ("Create and edit files" under Settings > Capabilities, or your organization's equivalent).
+The source is in `skill/zia-web-insights-categorize/SKILL.md`.
+
 ## Issues and contributing
 
 Found a bug or want a feature? Open an [issue](../../issues/new/choose). Outside pull requests aren't accepted; see [CONTRIBUTING.md](CONTRIBUTING.md). Keep exports, credentials and tenant names out of issues.
