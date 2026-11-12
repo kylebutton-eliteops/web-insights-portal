@@ -1,0 +1,598 @@
+{
+ "OTHER_ADULT_MATERIAL": {
+  "name": "Other Adult Material",
+  "super": "Adult Material"
+ },
+ "ADULT_THEMES": {
+  "name": "Adult Themes",
+  "super": "Adult Material"
+ },
+ "LINGERIE_BIKINI": {
+  "name": "Lingerie Bikini",
+  "super": "Adult Material"
+ },
+ "DEVELOPER_TOOLS": {
+  "name": "Developer Tools",
+  "super": "Information Technology"
+ },
+ "NUDITY": {
+  "name": "Nudity",
+  "super": "Adult Material"
+ },
+ "PORNOGRAPHY": {
+  "name": "Pornography",
+  "super": "Adult Material"
+ },
+ "SEXUALITY": {
+  "name": "Sexuality",
+  "super": "Adult Material"
+ },
+ "ADULT_SEX_EDUCATION": {
+  "name": "Adult Sex Education",
+  "super": "Adult Material"
+ },
+ "K_12_SEX_EDUCATION": {
+  "name": "K 12 Sex Education",
+  "super": "Adult Material"
+ },
+ "OTHER_BUSINESS_AND_ECONOMY": {
+  "name": "Other Business and Economy",
+  "super": "Business and Economy"
+ },
+ "CORPORATE_MARKETING": {
+  "name": "Corporate Marketing",
+  "super": "Business and Economy"
+ },
+ "FINANCE": {
+  "name": "Finance",
+  "super": "Business and Economy"
+ },
+ "PROFESSIONAL_SERVICES": {
+  "name": "Professional Services",
+  "super": "Business and Economy"
+ },
+ "CLASSIFIEDS": {
+  "name": "Classifieds",
+  "super": "Business and Economy"
+ },
+ "OTHER_DRUGS": {
+  "name": "Other Drugs",
+  "super": "Drugs"
+ },
+ "OTHER_EDUCATION": {
+  "name": "Other Education",
+  "super": "Education"
+ },
+ "CONTINUING_EDUCATION_COLLEGES": {
+  "name": "Continuing Education/Colleges",
+  "super": "Education"
+ },
+ "HISTORY": {
+  "name": "History",
+  "super": "Education"
+ },
+ "K_12": {
+  "name": "K 12",
+  "super": "Education"
+ },
+ "REFERENCE_SITES": {
+  "name": "Reference Sites",
+  "super": "Education"
+ },
+ "SCIENCE_AND_TECHNOLOGY": {
+  "name": "Science/Tech",
+  "super": "Education"
+ },
+ "OTHER_ENTERTAINMENT_AND_RECREATION": {
+  "name": "Other Entertainment And Recreation",
+  "super": "Entertainment/Recreation"
+ },
+ "ENTERTAINMENT": {
+  "name": "Entertainment",
+  "super": "Entertainment/Recreation"
+ },
+ "TELEVISION_AND_MOVIES": {
+  "name": "Television/Movies",
+  "super": "Entertainment/Recreation"
+ },
+ "MUSIC": {
+  "name": "Music and Audio Streaming",
+  "super": "Entertainment/Recreation"
+ },
+ "STREAMING_MEDIA": {
+  "name": "Video Streaming",
+  "super": "Entertainment/Recreation"
+ },
+ "RADIO_STATIONS": {
+  "name": "Radio Stations",
+  "super": "Entertainment/Recreation"
+ },
+ "GAMBLING": {
+  "name": "Gambling",
+  "super": "Gambling"
+ },
+ "OTHER_GAMES": {
+  "name": "Online and Other Games",
+  "super": "Games"
+ },
+ "OTHER_GOVERNMENT_AND_POLITICS": {
+  "name": "Other Government And Politics",
+  "super": "Government And Politics"
+ },
+ "GOVERNMENT": {
+  "name": "Government",
+  "super": "Government And Politics"
+ },
+ "POLITICS": {
+  "name": "Politics",
+  "super": "Government And Politics"
+ },
+ "HEALTH": {
+  "name": "Health",
+  "super": "Health"
+ },
+ "OTHER_ILLEGAL_OR_QUESTIONABLE": {
+  "name": "Other Illegal Or Questionable",
+  "super": "Illegal Or Questionable"
+ },
+ "COPYRIGHT_INFRINGEMENT": {
+  "name": "Copyright Infringement",
+  "super": "Illegal Or Questionable"
+ },
+ "COMPUTER_HACKING": {
+  "name": "Computer Hacking",
+  "super": "Illegal Or Questionable"
+ },
+ "QUESTIONABLE": {
+  "name": "Questionable",
+  "super": "Illegal Or Questionable"
+ },
+ "PROFANITY": {
+  "name": "Profanity",
+  "super": "Illegal Or Questionable"
+ },
+ "MATURE_HUMOR": {
+  "name": "Mature Humor",
+  "super": "Illegal Or Questionable"
+ },
+ "ANONYMIZER": {
+  "name": "Anonymizer",
+  "super": "Illegal Or Questionable"
+ },
+ "OTHER_INFORMATION_TECHNOLOGY": {
+  "name": "Other Information Technology",
+  "super": "Information Technology"
+ },
+ "TRANSLATORS": {
+  "name": "Translators",
+  "super": "Information Technology"
+ },
+ "IMAGE_HOST": {
+  "name": "Image Host",
+  "super": "Information Technology"
+ },
+ "FILE_HOST": {
+  "name": "FileHost",
+  "super": "Information Technology"
+ },
+ "SHAREWARE_DOWNLOAD": {
+  "name": "Shareware Download",
+  "super": "Information Technology"
+ },
+ "WEB_BANNERS": {
+  "name": "Advertising",
+  "super": "Information Technology"
+ },
+ "WEB_HOST": {
+  "name": "Web Host",
+  "super": "Information Technology"
+ },
+ "WEB_SEARCH": {
+  "name": "Web Search",
+  "super": "Information Technology"
+ },
+ "PORTALS": {
+  "name": "Portals",
+  "super": "Information Technology"
+ },
+ "SAFE_SEARCH_ENGINE": {
+  "name": "Safe Search Engine",
+  "super": "Information Technology"
+ },
+ "OTHER_INTERNET_COMMUNICATION": {
+  "name": "Other Internet Communication",
+  "super": "Internet Communication"
+ },
+ "INTERNET_SERVICES": {
+  "name": "Internet Services",
+  "super": "Internet Communication"
+ },
+ "DISCUSSION_FORUMS": {
+  "name": "Discussion Forums",
+  "super": "Internet Communication"
+ },
+ "ONLINE_CHAT": {
+  "name": "Online Chat",
+  "super": "Internet Communication"
+ },
+ "EMAIL_HOST": {
+  "name": "Webmail",
+  "super": "Internet Communication"
+ },
+ "BLOG": {
+  "name": "Blogs",
+  "super": "Internet Communication"
+ },
+ "JOB_SEARCH": {
+  "name": "Job/Employment Search",
+  "super": "Job/Employment Search"
+ },
+ "MILITANCY_HATE_AND_EXTREMISM": {
+  "name": "Militancy Hate And Extremism",
+  "super": "Militancy Hate And Extremism"
+ },
+ "OTHER_MISCELLANEOUS": {
+  "name": "Other Miscellaneous",
+  "super": "Miscellaneous"
+ },
+ "NEWS_AND_MEDIA": {
+  "name": "News and Media",
+  "super": "News and Media"
+ },
+ "OTHER_RELIGION": {
+  "name": "Other Religion",
+  "super": "Religion"
+ },
+ "TRADITIONAL_RELIGION": {
+  "name": "Traditional Religion",
+  "super": "Religion"
+ },
+ "CULT": {
+  "name": "Cult",
+  "super": "Religion"
+ },
+ "ALT_NEW_AGE": {
+  "name": "Alt New Age",
+  "super": "Religion"
+ },
+ "OTHER_SOCIAL_AND_FAMILY_ISSUES": {
+  "name": "Other Social And Family Issues",
+  "super": "Social And Family Issues"
+ },
+ "SOCIAL_ISSUES": {
+  "name": "Social Issues",
+  "super": "Social And Family Issues"
+ },
+ "FAMILY_ISSUES": {
+  "name": "Family Issues",
+  "super": "Social And Family Issues"
+ },
+ "OTHER_SOCIETY_AND_LIFESTYLE": {
+  "name": "Other Society And Lifestyle",
+  "super": "Society and Lifestyle"
+ },
+ "ART_CULTURE": {
+  "name": "Art/Culture",
+  "super": "Society and Lifestyle"
+ },
+ "ALTERNATE_LIFESTYLE": {
+  "name": "Alternate Lifestyle",
+  "super": "Society and Lifestyle"
+ },
+ "HOBBIES_AND_LEISURE": {
+  "name": "Hobbies/Leisure",
+  "super": "Society and Lifestyle"
+ },
+ "DINING_AND_RESTAURANT": {
+  "name": "Dining/Restaurant",
+  "super": "Society and Lifestyle"
+ },
+ "ALCOHOL_TOBACCO": {
+  "name": "Alcohol Tobacco",
+  "super": "Society and Lifestyle"
+ },
+ "SOCIAL_NETWORKING": {
+  "name": "Social Networking",
+  "super": "Society and Lifestyle"
+ },
+ "OTHER_SHOPPING_AND_AUCTIONS": {
+  "name": "Other Shopping and Auctions",
+  "super": "Shopping and Auctions"
+ },
+ "SPECIALIZED_SHOPPING": {
+  "name": "Online Shopping",
+  "super": "Shopping and Auctions"
+ },
+ "REAL_ESTATE": {
+  "name": "Real Estate",
+  "super": "Shopping and Auctions"
+ },
+ "ONLINE_AUCTIONS": {
+  "name": "Online Auctions",
+  "super": "Shopping and Auctions"
+ },
+ "SPECIAL_INTERESTS": {
+  "name": "Special Interests/Social Organizations",
+  "super": "Special Interests/Social Organizations"
+ },
+ "SPORTS": {
+  "name": "Sports",
+  "super": "Sports"
+ },
+ "TASTELESS": {
+  "name": "Tasteless",
+  "super": "Tasteless"
+ },
+ "TRAVEL": {
+  "name": "Travel",
+  "super": "Travel"
+ },
+ "VEHICLES": {
+  "name": "Vehicles",
+  "super": "Vehicles"
+ },
+ "VIOLENCE": {
+  "name": "Violence",
+  "super": "Violence"
+ },
+ "WEAPONS_AND_BOMBS": {
+  "name": "Weapons And Bombs",
+  "super": "Weapons And Bombs"
+ },
+ "USER_DEFINED": {
+  "name": "User Defined",
+  "super": "User Defined"
+ },
+ "OTHER_SECURITY": {
+  "name": "Other Security",
+  "super": "Security"
+ },
+ "ADWARE_OR_SPYWARE": {
+  "name": "Adware Or Spyware",
+  "super": "Security"
+ },
+ "P2P_COMMUNICATION": {
+  "name": "P2P Communication",
+  "super": "Internet Communication"
+ },
+ "MISCELLANEOUS_OR_UNKNOWN": {
+  "name": "Miscellaneous or Unknown",
+  "super": "Miscellaneous"
+ },
+ "SOCIAL_ADULT": {
+  "name": "Social Adult",
+  "super": "Adult Material"
+ },
+ "SOCIAL_NETWORKING_GAMES": {
+  "name": "Social Networking Games",
+  "super": "Games"
+ },
+ "REMOTE_ACCESS": {
+  "name": "Remote Access Tools",
+  "super": "Internet Communication"
+ },
+ "NEWLY_REG_DOMAINS": {
+  "name": "Newly Reg Domains",
+  "super": "Miscellaneous"
+ },
+ "CDN": {
+  "name": "CDN",
+  "super": "Information Technology"
+ },
+ "NON_CATEGORIZABLE": {
+  "name": "Non Categorizable",
+  "super": "Miscellaneous"
+ },
+ "WEB_CONFERENCING": {
+  "name": "Web Conferencing",
+  "super": "Internet Communication"
+ },
+ "ZSPROXY_IPS": {
+  "name": "Zscaler Proxy IPs",
+  "super": "Internet Communication"
+ },
+ "ENCR_WEB_CONTENT": {
+  "name": "Encr Web Content",
+  "super": "Security"
+ },
+ "OSS_UPDATES": {
+  "name": "Operating System and Software Updates",
+  "super": "Information Technology"
+ },
+ "TRADING_BROKARAGE_INSURANCE": {
+  "name": "Online Trading & Brokerage",
+  "super": "Business and Economy"
+ },
+ "DNS_OVER_HTTPS": {
+  "name": "Dns Over Https",
+  "super": "Information Technology"
+ },
+ "MARIJUANA": {
+  "name": "Marijuana",
+  "super": "Drugs"
+ },
+ "DYNAMIC_DNS": {
+  "name": "Dynamic Dns",
+  "super": "Security"
+ },
+ "MILITARY": {
+  "name": "Military",
+  "super": "Government And Politics"
+ },
+ "NEWLY_REVIVED_DOMAINS": {
+  "name": "Newly Revived Domains",
+  "super": "Security"
+ },
+ "AI_ML_APPS": {
+  "name": "Generative AI and ML Applications",
+  "super": "Information Technology"
+ },
+ "FILE_CONVERTORS": {
+  "name": "File Convertors",
+  "super": "Information Technology"
+ },
+ "GENERAL_AI_ML": {
+  "name": "General AI/ML",
+  "super": "Information Technology"
+ },
+ "INSURANCE": {
+  "name": "Insurance",
+  "super": "Business and Economy"
+ },
+ "CUSTOM_01": {
+  "name": "Custom 01",
+  "super": "User Defined"
+ },
+ "CUSTOM_02": {
+  "name": "Custom 02",
+  "super": "User Defined"
+ },
+ "CUSTOM_03": {
+  "name": "Custom 03",
+  "super": "User Defined"
+ },
+ "CUSTOM_04": {
+  "name": "Custom 04",
+  "super": "User Defined"
+ },
+ "CUSTOM_05": {
+  "name": "Custom 05",
+  "super": "User Defined"
+ },
+ "CUSTOM_06": {
+  "name": "Custom 06",
+  "super": "User Defined"
+ },
+ "CUSTOM_07": {
+  "name": "Custom 07",
+  "super": "User Defined"
+ },
+ "CUSTOM_08": {
+  "name": "Custom 08",
+  "super": "User Defined"
+ },
+ "CUSTOM_09": {
+  "name": "Custom 09",
+  "super": "User Defined"
+ },
+ "CUSTOM_10": {
+  "name": "Custom 10",
+  "super": "User Defined"
+ },
+ "CUSTOM_11": {
+  "name": "Custom 11",
+  "super": "User Defined"
+ },
+ "CUSTOM_12": {
+  "name": "Custom 12",
+  "super": "User Defined"
+ },
+ "CUSTOM_13": {
+  "name": "Custom 13",
+  "super": "User Defined"
+ },
+ "CUSTOM_14": {
+  "name": "Custom 14",
+  "super": "User Defined"
+ },
+ "CUSTOM_15": {
+  "name": "Custom 15",
+  "super": "User Defined"
+ },
+ "CUSTOM_17": {
+  "name": "Custom 17",
+  "super": "User Defined"
+ },
+ "CUSTOM_18": {
+  "name": "Custom 18",
+  "super": "User Defined"
+ },
+ "CUSTOM_19": {
+  "name": "Custom 19",
+  "super": "User Defined"
+ },
+ "CUSTOM_20": {
+  "name": "Custom 20",
+  "super": "User Defined"
+ },
+ "CUSTOM_21": {
+  "name": "Custom 21",
+  "super": "User Defined"
+ },
+ "CUSTOM_22": {
+  "name": "Custom 22",
+  "super": "User Defined"
+ },
+ "CUSTOM_23": {
+  "name": "Custom 23",
+  "super": "User Defined"
+ },
+ "CUSTOM_24": {
+  "name": "Custom 24",
+  "super": "User Defined"
+ },
+ "CUSTOM_25": {
+  "name": "Custom 25",
+  "super": "User Defined"
+ },
+ "CUSTOM_26": {
+  "name": "Custom 26",
+  "super": "User Defined"
+ },
+ "CUSTOM_27": {
+  "name": "Custom 27",
+  "super": "User Defined"
+ },
+ "CUSTOM_28": {
+  "name": "Custom 28",
+  "super": "User Defined"
+ },
+ "CUSTOM_29": {
+  "name": "Custom 29",
+  "super": "User Defined"
+ },
+ "CUSTOM_30": {
+  "name": "Custom 30",
+  "super": "User Defined"
+ },
+ "CUSTOM_31": {
+  "name": "Custom 31",
+  "super": "User Defined"
+ },
+ "CUSTOM_32": {
+  "name": "Custom 32",
+  "super": "User Defined"
+ },
+ "CUSTOM_33": {
+  "name": "Custom 33",
+  "super": "User Defined"
+ },
+ "CUSTOM_34": {
+  "name": "Custom 34",
+  "super": "User Defined"
+ },
+ "CUSTOM_35": {
+  "name": "Custom 35",
+  "super": "User Defined"
+ },
+ "CUSTOM_36": {
+  "name": "Custom 36",
+  "super": "User Defined"
+ },
+ "CUSTOM_37": {
+  "name": "Custom 37",
+  "super": "User Defined"
+ },
+ "CUSTOM_38": {
+  "name": "Custom 38",
+  "super": "User Defined"
+ },
+ "CUSTOM_39": {
+  "name": "Custom 39",
+  "super": "User Defined"
+ },
+ "CUSTOM_40": {
+  "name": "Custom 40",
+  "super": "User Defined"
+ }
+}

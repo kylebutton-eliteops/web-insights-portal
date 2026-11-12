@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="panel">
+  <h1>Categorize a Web Insights export</h1>
+  <p class="muted">Upload a ZIA Web Insights CSV. The portal de-duplicates the URLs by hostname, counts how often each one
+  appears, and adds categories, cloud apps, forwarding rules, SSL inspection and custom-category gaps. You get a CSV
+  (and an Excel workbook) back. New here? Read <a href="{{ url_for('help_page') }}">How to use</a>.</p>
+
+  {% if error %}<div class="note err">{{ error }}</div>{% endif %}
+
+  <form method="post" action="{{ url_for('upload') }}" enctype="multipart/form-data">
+    <label for="export">Web Insights CSV export</label>
+    <input type="file" id="export" name="export" accept=".csv" required>
+
+    <label class="check"><input type="checkbox" name="use_api" id="use_api" {{ 'checked' if api_ready }}>
+      <span>Also look up current Zscaler categories with OneAPI
+      <span class="muted">({{ 'credentials found in .env' if api_ready else 'needs an API client; fill in the fields below or add a .env file' }}). Adds about a minute per 4,500 hosts.</span></span></label>
+
+    <details {{ 'open' if not api_ready }}>
+      <summary>OneAPI credentials (optional; not saved)</summary>
+      <p class="muted">Leave blank to use the <code>.env</code> file next to <code>app.py</code>.</p>
+      <label for="v">Vanity domain</label><input type="text" id="v" name="ZIA_VANITY_DOMAIN" placeholder="e.g. acme (from acme.zslogin.net)">
+      <label for="c">Client ID</label><input type="text" id="c" name="ZIA_CLIENT_ID" autocomplete="off">
+      <label for="s">Client secret</label><input type="password" id="s" name="ZIA_CLIENT_SECRET" autocomplete="off">
+    </details>
+
+    <label class="check"><input type="checkbox" name="keep"><span>Keep the uploaded export on disk after processing
+      <span class="muted">(off by default: the raw export contains user names)</span></span></label>
+
+    <p style="margin-top:20px"><button type="submit">Upload and analyze</button></p>
+  </form>
+</div>
+
+{% if jobs %}
+<div class="panel">
+  <h2>Recent runs</h2>
+  <div class="table-wrap"><table>
+    <tr><th>File</th><th>Started</th><th>OneAPI</th><th>Status</th></tr>
+    {% for id, j in jobs %}
+    <tr><td><a href="{{ url_for('job_page', job_id=id) }}">{{ j.filename }}</a></td>
+        <td>{{ j.started.strftime('%b %d %H:%M') }}</td><td>{{ 'Yes' if j.use_api else 'No' }}</td><td>{{ j.status }}</td></tr>
+    {% endfor %}
+  </table></div>
+</div>
+{% endif %}
+{% endblock %}

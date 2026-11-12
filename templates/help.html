@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block title %}How to use | Web Insights Portal{% endblock %}
+{% block body %}
+<div class="panel">
+  <h1>How to use the Web Insights Portal</h1>
+  <p class="muted">Four steps: export logs from ZIA, start the portal, upload, download the CSV. The first run takes about
+  ten minutes to set up; after that it's a couple of minutes per export.</p>
+  <p><a href="#export">1. Export</a> · <a href="#setup">2. Set up</a> · <a href="#run">3. Upload</a> ·
+     <a href="#read">4. Read the results</a> · <a href="#trouble">Troubleshooting</a></p>
+</div>
+
+<div class="panel" id="export">
+  <h2>1. Export logs from Web Insights</h2>
+  <ol>
+    <li>In the ZIA admin console, open <b>Analytics → Web Insights</b> and switch to the <b>Logs</b> view.
+      <span class="muted">(Menu names can differ a little in the new Experience Center.)</span></li>
+    <li>Pick the <b>time range</b>. Web Insights exports at most <b>1,000,000 rows</b>, so for a busy tenant use a few
+      hours to a day at a time, or add filters (location, department, policy action).</li>
+    <li>Add <b>filters</b> if you want: for example Policy Action = Allowed to review what's getting through, or a
+      single location or department.</li>
+    <li>Open the <b>column picker</b> and make sure these columns are on. The portal skips any that are missing:
+      <ul>
+        <li><b>Required:</b> URL</li>
+        <li><b>Recommended:</b> Event Time, User, Policy Action, URL Category, URL Super Category, URL Class,
+          Cloud Application, Cloud Application Class, Department, Forwarding Rule, Certificate Chain Validity, ALPN Protocol</li>
+        <li><b>For "which rule did it hit":</b> any rule-name columns (URL Filtering rule, Cloud App Control rule,
+          SSL Inspection rule). The portal picks up every column with "Rule" in its name and adds it to the output.</li>
+      </ul></li>
+    <li>Click <b>Export → CSV</b>. Don't open and re-save the file in Excel first; upload it exactly as downloaded.</li>
+  </ol>
+</div>
+
+<div class="panel" id="setup">
+  <h2>2. Set up the portal (first time only)</h2>
+  <ol>
+    <li>Install <b>Python 3.9 or newer</b> (<code>python3 --version</code> to check).</li>
+    <li>Open a terminal in the <code>web_insights_portal</code> folder and run:
+      <ul><li>macOS / Linux: <code>./run.sh</code></li>
+          <li>Windows (PowerShell): <code>.\run.ps1</code></li></ul>
+      The script creates a private Python environment, installs Flask, pandas and openpyxl, and starts the portal.</li>
+    <li>Open <b><a href="http://127.0.0.1:5055">http://127.0.0.1:5055</a></b>. The portal only listens on your own
+      computer; nobody else on the network can reach it.</li>
+    <li><b>Optional: Zscaler category lookup.</b> To check each host against Zscaler's current categories (not just what
+      was logged), you need a OneAPI client:
+      <ul>
+        <li>In ZIA, create a <b>read-only</b> admin role (View Only, URL Categories / URL Filtering view access).</li>
+        <li>In ZIdentity, go to <b>Integration → API Clients → Add</b>, pick <b>Client Secret</b>, and assign the ZIA role.</li>
+        <li>Copy <code>.env.example</code> to <code>.env</code> and fill in <code>ZIA_VANITY_DOMAIN</code> (the part before
+          <code>.zslogin.net</code> in your sign-in address), <code>ZIA_CLIENT_ID</code> and <code>ZIA_CLIENT_SECRET</code>.
+          Or type them into the upload form each time; they aren't saved.</li>
+      </ul></li>
+  </ol>
+</div>
+
+<div class="panel" id="run">
+  <h2>3. Upload and analyze</h2>
+  <ol>
+    <li>On the <a href="{{ url_for('index') }}">Upload</a> page, choose the CSV you exported.</li>
+    <li>Tick <b>Also look up current Zscaler categories with OneAPI</b> if you set up credentials. It adds about a minute
+      per 4,500 hosts (Zscaler's API takes 100 hosts a second).</li>
+    <li>Click <b>Upload and analyze</b>. A 1M-row export takes about a minute without the lookup.</li>
+    <li>When it finishes, download:
+      <ul><li><b>Hosts CSV</b>: one row per host, which is usually what you want.</li>
+          <li><b>All CSVs (.zip)</b>: the hosts CSV plus category, SSL, forwarding rule and rule-name summaries.</li>
+          <li><b>Excel workbook</b>: everything above as tabs. Import it into Google Sheets with File → Import.</li></ul></li>
+  </ol>
+  <p class="muted">The uploaded export is deleted once it's processed (it contains user names). Outputs stay in
+  <code>data/outputs</code> until you delete them, and the Recent runs list clears when you stop the portal.</p>
+</div>
+
+<div class="panel" id="read">
+  <h2>4. Read the results</h2>
+  <div class="table-wrap"><table>
+    <tr><th>Column</th><th>What it means</th></tr>
+    <tr><td>Host, Hits, % of hits</td><td>The hostname (URLs de-duplicated by host) and how many log rows it had.</td></tr>
+    <tr><td>Unique full URLs</td><td>How many different paths sat behind that host.</td></tr>
+    <tr><td>Unique users, Departments, Top departments</td><td>Who depends on the host. Check this before changing policy for it.</td></tr>
+    <tr><td>Logged URL category, All logged categories</td><td>What ZIA logged at request time, including the tenant's custom categories. A host can show several.</td></tr>
+    <tr><td>Tenant custom category</td><td>Any user-defined categories the host was logged under.</td></tr>
+    <tr><td>Custom category gap</td><td><b>Partial</b>: some hits matched a custom category and the rest fell to Zscaler's default, usually a missing path or subdomain in the custom list. <b>Sibling</b>: other hosts on the same domain are in a custom category but this one isn't.</td></tr>
+    <tr><td>URL class, Cloud application, Cloud app class</td><td>From the logs; use them for Cloud App Control planning.</td></tr>
+    <tr><td>Policy action</td><td>What happened to the requests (only what you exported; filter on Blocked to see blocks).</td></tr>
+    <tr><td>Forwarding rule, detail</td><td>Which forwarding rule the traffic used, e.g. a Dedicated IP egress rule. "Mixed" means more than one.</td></tr>
+    <tr><td>Rule-name columns</td><td>Only if the export had them: each rule the host hit, with hit counts.</td></tr>
+    <tr><td>SSL inspected %, SSL status</td><td>Worked out from Certificate Chain Validity: a value means the request was inspected, blank means it wasn't.</td></tr>
+    <tr><td>SSL bypass review</td><td><b>Expected</b>: commonly bypassed on purpose (Microsoft 365 / Teams, OS updates, OCSP/CRL, Apple and Google device services, pinned apps). <b>Review</b>: worth checking (financial or health sites, ad-tech, or inspected only some of the time). These labels are pattern-based guesses, not policy.</td></tr>
+    <tr><td>Protocol (main), Protocol mix</td><td>ALPN protocol. A lot of "Unknown" usually means traffic Zscaler couldn't identify, often because it wasn't inspected.</td></tr>
+    <tr><td>First seen, Last seen</td><td>Earliest and latest request in the export, in the time zone the export used.</td></tr>
+    <tr><td>API categories, super categories, application</td><td>Only with the OneAPI lookup: Zscaler's current built-in categories for the host (several are common) and the app Zscaler maps it to. Custom categories don't come back from the API.</td></tr>
+    <tr><td>Logged category in API list?</td><td>"No" means the category Zscaler logged isn't one of its current categories, so the categorization has changed since.</td></tr>
+  </table></div>
+</div>
+
+<div class="panel" id="trouble">
+  <h2>Troubleshooting</h2>
+  <ul>
+    <li><b>"Couldn't find a header row with a URL column"</b>: the file isn't a Web Insights CSV, or the URL column was
+      turned off before exporting.</li>
+    <li><b>Exactly 1,000,000 rows</b>: you hit the export limit. Export shorter time ranges and run each one.</li>
+    <li><b>"OneAPI sign-in failed (HTTP 401)"</b>: check the client ID and secret, and that the vanity domain is only the
+      prefix (e.g. <code>acme</code>, not <code>https://acme.zslogin.net</code>).</li>
+    <li><b>"Can't reach …zslogin.net"</b>: your network or proxy is blocking it. Try off-VPN, or skip the lookup.</li>
+    <li><b>Lookup errors with HTTP 403</b>: the API client's ZIA role is missing URL lookup access.</li>
+    <li><b>Port 5055 already in use</b>: start it with <code>PORT=5056 ./run.sh</code>.</li>
+    <li><b>Upload fails for very large files</b>: the limit is 2 GB. Split the time range.</li>
+  </ul>
+</div>
+{% endblock %}
