@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for using the Web Insights Portal.
+Thanks for using the ZIA Toolkit.
 
 ## Report a bug or request a feature
 

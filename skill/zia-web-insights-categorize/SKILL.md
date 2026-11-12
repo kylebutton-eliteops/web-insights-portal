@@ -5,17 +5,18 @@ description: "Analyze a ZIA Web Insights CSV export: dedupe URLs by host, count 
 
 # ZIA Web Insights categorization
 
-Use this skill when someone shares a ZIA **Web Insights log export** (CSV) or asks to: de-duplicate a URL list, look up Zscaler URL categories, count how often each URL/host appears, see which rule traffic hit, review SSL inspection bypasses, find custom-category gaps, or run/extend the **Web Insights Portal**. Not for Zscaler Client Connector log bundles or pcaps.
+Use this skill when someone shares a ZIA **Web Insights log export** (CSV) or asks to: de-duplicate a URL list, look up Zscaler URL categories, count how often each URL/host appears, see which rule traffic hit, review SSL inspection bypasses, find custom-category gaps, check what a planned URL-category block would break, or run/extend the **ZIA Toolkit** (Web Insights + Block impact). Not for Zscaler Client Connector log bundles or pcaps.
 
 ## Get the tools
 The tools are in the public repo **kylebutton-eliteops/web-insights-portal** (MIT license).
 1. In a session with a shell: `git clone --depth 1 https://github.com/kylebutton-eliteops/web-insights-portal` (reuse the clone if it is already there), then `pip install -r web-insights-portal/requirements.txt` (add `--break-system-packages` if pip asks for it). If the shell can't reach GitHub, ask the person to attach the repo zip (https://github.com/kylebutton-eliteops/web-insights-portal/archive/refs/heads/main.zip).
-2. When the person wants to run the portal on their own computer, point them at the repo's `README.md` and `HELP.html`: download, `./run.sh` (Windows: `.\run.ps1`), open http://127.0.0.1:5055.
+2. When the person wants to run the toolkit on their own computer, point them at the repo's `README.md` and `HELP.html`: download, `./run.sh` (Windows: `.\run.ps1`), open http://127.0.0.1:5055. They connect Zscaler once on the dashboard (or `.env`), add exports once, then pick a tool.
 
 What's there:
-- `app.py` - local Flask portal. Upload the CSV, optional OneAPI lookup, download hosts CSV / zip of summary CSVs / Excel workbook. `HELP.html` and the in-app How to use page are the user instructions.
+- `app.py` - local Flask dashboard: shared Zscaler connection, an exports library, **Web Insights** (hosts CSV / zip of summary CSVs / Excel workbook) and **Block impact** (mounted at `/impact`). `HELP.html` and the in-app How to use page are the user instructions.
 - `analyzer.py` - the processing. For a one-off analysis in a session, import it directly: `analyzer.analyze(path, use_api=False)` returns the per-host table, summaries and info.
-- `zia_api.py` - OneAPI token, `urlLookup`, category catalog.
+- `creds.py`, `engine.py`, `shared.py` - one credential store (`.env`, `ZIA_*` or `ZSCALER_*` names, or typed on the dashboard), the single OneAPI/legacy client with `urlLookup` and the category catalog, and the shared lookup cache. Use `engine.open_client`, `engine.catalog`, `engine.lookup`.
+- `impact_bp.py`, `category_impact/` - **Block impact**: for allowed traffic, looks up every category per domain and shows what a planned category block would catch (hidden multi-category matches, enforcing rule). Engine: `category_impact/zia_category_impact.py` (stdlib; `python3 zia_category_impact.py logs/*.csv --auth oneapi`).
 - `categorize_web_insights.py` - small CLI: `python3 categorize_web_insights.py export.csv --env-file client.env` (`--dry-run` = dedupe and count only, `--mode url` = dedupe by full URL, `--token-file` = reuse an existing bearer token, `--token-info` = print the vanity domain and expiry from a token).
 - `zia_category_names.json` - category ID -> console display name.
 
@@ -29,7 +30,8 @@ What's there:
 7. **Rules.** The default export only has Forwarding Rule. Any column with "Rule" in its name (URL Filtering / Cloud App Control / SSL Inspection rule names) is picked up automatically; if none are present, say the export needs those columns turned on rather than inferring a rule.
 8. **SSL inspection** is inferred from Certificate Chain Validity (a value = inspected, blank = not inspected). The Expected / Review labels are pattern-based guesses to sort hosts (M365/Teams, OS updates, OCSP/CRL, Apple/Google device services, pinned apps = expected; finance, health, ad-tech, partly inspected = review). Present them as such, never as confirmed policy.
 9. **Custom-category gaps.** Partial = some hits in a custom category and the rest fell to Zscaler's default (usually a missing path or subdomain). Sibling = other hosts on the same domain are in a custom category and this one isn't; very large domains are skipped or it flags hundreds of hosts.
-10. **Verify totals** (hits sum back to the row count; host counts match across tabs) before reporting. Lead with the answer: rows, unique hosts, top categories, then caveats.
+10. **Block impact questions** ("what breaks if we block File Host?"): the export should be filtered to Policy Action = Allowed with URL, URL Category, User and rule-name columns. A URL can carry several categories, so a new block can catch traffic logged under another category (e.g. SharePoint is Corporate Marketing and File Host). Look up every category per domain, list what the planned block would catch, flag the hidden ones (logged under a different category), and suggest exclusions to place in an allow rule above the new block. Lookups share one cache with the Web Insights lookup.
+11. **Verify totals** (hits sum back to the row count; host counts match across tabs) before reporting. Lead with the answer: rows, unique hosts, top categories, then caveats.
 
 ## Credentials
 - OneAPI uses a ZIdentity API client (client ID + secret, Client Secret auth) with a **read-only** ZIA role; the tools fetch a short-lived token themselves. The **vanity domain** is the prefix of the ZIdentity sign-in address (`<vanity>.zslogin.net`); it is also in a token's `iss` claim. A value like `zscalertwo.net-<number>` is the ZIA cloud + org ID from the legacy API, not the vanity domain.

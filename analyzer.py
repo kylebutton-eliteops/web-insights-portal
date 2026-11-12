@@ -7,7 +7,7 @@ from collections import Counter
 
 import pandas as pd
 
-import zia_api
+import engine
 
 csv.field_size_limit(10**8)
 
@@ -108,7 +108,7 @@ def pct_label(p):
 
 
 # ------------------------------------------------------------------ main
-def analyze(path, use_api=False, creds=None, progress=lambda pct, msg: None):
+def analyze(path, use_api=False, progress=lambda pct, msg: None):
     progress(2, "Reading the export header")
     hdr_row, header = find_header(path)
     cols = [c for c in header if c in WANTED or (RULE_COL.search(c) and c not in SKIP_RULE_COLS)]
@@ -207,11 +207,14 @@ def analyze(path, use_api=False, creds=None, progress=lambda pct, msg: None):
     api_note = ""
     if use_api:
         progress(65, "Signing in to OneAPI")
-        token = zia_api.get_token(*creds)
-        catalog = zia_api.category_catalog(token)
-        hosts = list(H.sort_values("Hits", ascending=False).index)
-        res = zia_api.url_lookup(hosts, token, progress=lambda d, n: progress(
-            65 + int(25 * d / n), f"Looking up categories in Zscaler: {d:,} of {n:,} hosts"))
+        ectx = engine.Ctx(lambda d, n: progress(65 + int(25 * d / max(n, 1)), f"Looking up categories in Zscaler: {d:,} of {n:,} hosts"))
+        client = engine.open_client(ectx)
+        try:
+            catalog = engine.catalog(client, ectx)
+            hosts = list(H.sort_values("Hits", ascending=False).index)
+            res, cache_hits = engine.lookup(hosts, client, ectx)
+        finally:
+            client.close()
         name = lambda c: catalog.get(c, {}).get("name") or c.replace("_", " ").title()
         sup = lambda c: catalog.get(c, {}).get("super", "")
         # learn friendly app names from the logs where we can
@@ -235,7 +238,8 @@ def analyze(path, use_api=False, creds=None, progress=lambda pct, msg: None):
             H["Logged category in API list?"] = [
                 "" if (lc in custom or not lc) else ("Yes" if lc in (ac or "").split("; ") else "No")
                 for lc, ac in zip(H["Logged URL category"], H["API categories"])]
-        api_note = f"OneAPI lookup: {sum(1 for r in res.values() if r['err'])} errors"
+        api_note = (f"OneAPI lookup: {sum(1 for r in res.values() if r['err'])} errors; "
+                    f"{cache_hits:,} of {len(res):,} hosts came from the shared lookup cache")
 
     if "SSL inspected %" in H:
         progress(92, "Classifying SSL inspection")

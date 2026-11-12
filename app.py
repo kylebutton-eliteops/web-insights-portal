@@ -1,6 +1,9 @@
-"""Web Insights Portal: upload a ZIA Web Insights CSV export, get a de-duplicated, categorized CSV back.
+"""ZIA Toolkit: one local dashboard for ZIA Web Insights tools.
 
 Run:  python3 app.py        then open http://127.0.0.1:5055
+
+One set of Zscaler credentials (creds.py), one lookup engine and cache (engine.py, shared.py), and one library of
+uploaded exports (shared by Web Insights and Block impact).
 """
 import datetime
 import os
@@ -11,27 +14,50 @@ import uuid
 from flask import Flask, abort, jsonify, redirect, render_template, request, send_file, url_for
 
 import analyzer
-import zia_api
+import creds
+import engine
+import impact_bp
+import shared
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-DATA = os.path.join(HERE, "data")
-UPLOADS, OUTPUTS = os.path.join(DATA, "uploads"), os.path.join(DATA, "outputs")
-os.makedirs(UPLOADS, exist_ok=True)
+OUTPUTS = os.path.join(HERE, "data", "outputs")
 os.makedirs(OUTPUTS, exist_ok=True)
+gui = impact_bp.gui           # Category Impact's helpers; its UPLOADS folder is the shared exports library
+LIBRARY = gui.UPLOADS
 
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 2 * 1024 ** 3   # 2 GB uploads
+app.register_blueprint(impact_bp.bp)
 JOBS = {}   # job_id -> dict(status, pct, msg, info, error, files, preview, summaries)
 
 
-def run_job(job_id, path, use_api, creds, keep_upload):
+@app.context_processor
+def inject_globals():
+    return {"impact_url": "/impact/", "conn": creds.status()}
+
+
+def library():
+    return gui.list_files()
+
+
+def fmt_size(n):
+    for u in ("B", "KB", "MB", "GB"):
+        if n < 1024 or u == "GB":
+            return f"{n:.0f} {u}" if u == "B" else f"{n:.1f} {u}"
+        n /= 1024
+
+
+app.jinja_env.filters["size"] = fmt_size
+
+
+def run_job(job_id, path, use_api):
     job = JOBS[job_id]
 
     def progress(pct, msg):
         job["pct"], job["msg"] = pct, msg
 
     try:
-        H, summaries, info = analyzer.analyze(path, use_api=use_api, creds=creds, progress=progress)
+        H, summaries, info = analyzer.analyze(path, use_api=use_api, progress=progress)
         base = os.path.join(OUTPUTS, job_id)
         stem = job["stem"]
         files = {
@@ -51,51 +77,105 @@ def run_job(job_id, path, use_api, creds, keep_upload):
     except Exception as e:
         traceback.print_exc()
         job.update(status="error", error=str(e))
-    finally:
-        if not keep_upload and os.path.exists(path):
-            os.remove(path)   # the raw export holds user names / emails; don't keep it around
 
 
+# ---------------------------------------------------------------- dashboard
 @app.route("/")
+def dashboard():
+    return render_template("dashboard.html", cache_count=shared.count(), workspace=shared.WORKSPACE, files=library(),
+                           jobs=sorted(JOBS.items(), key=lambda kv: kv[1]["started"], reverse=True)[:5],
+                           msg=request.args.get("msg", ""), err=request.args.get("err", ""))
+
+
+@app.route("/connect", methods=["POST"])
+def connect():
+    if request.form.get("action") == "disconnect":
+        creds.clear_memory()
+        return redirect(url_for("dashboard", msg="Cleared the credentials typed this session."))
+    creds.set_memory({k: request.form.get(k, "") for k in ("vanity", "client_id", "client_secret")})
+    if not creds.status()["oneapi"]:
+        return redirect(url_for("dashboard", err="Vanity domain, client ID and client secret are all needed."))
+    ctx = engine.Ctx()
+    try:
+        engine.open_client(ctx)   # test sign-in
+    except Exception as e:
+        creds.clear_memory()
+        return redirect(url_for("dashboard", err=f"Sign-in failed: {e}"))
+    return redirect(url_for("dashboard", msg="Connected. Both tools will use these credentials until you stop the toolkit."))
+
+
+@app.route("/exports/upload", methods=["POST"])
+def exports_upload():
+    saved, errors = 0, []
+    os.makedirs(LIBRARY, exist_ok=True)
+    for f in request.files.getlist("export"):
+        if not f.filename:
+            continue
+        try:
+            name = gui.safe_name(f.filename)
+        except ValueError as e:
+            errors.append(str(e))
+            continue
+        f.save(os.path.join(LIBRARY, name))
+        saved += 1
+    if errors and not saved:
+        return redirect(url_for("dashboard", err=errors[0]))
+    return redirect(url_for("dashboard", msg=f"Added {saved} export(s) to the library."))
+
+
+@app.route("/exports/delete", methods=["POST"])
+def exports_delete():
+    name = request.form.get("name", "")
+    try:
+        if name == "__all__":
+            for f in library():
+                os.remove(os.path.join(LIBRARY, f["name"]))
+        else:
+            p = os.path.join(LIBRARY, gui.safe_name(name))
+            if os.path.exists(p):
+                os.remove(p)
+    except ValueError as e:
+        return redirect(url_for("dashboard", err=str(e)))
+    return redirect(url_for("dashboard", msg="Removed."))
+
+
+@app.route("/cache/clear", methods=["POST"])
+def clear_cache():
+    shared.clear()
+    return redirect(url_for("dashboard", msg="Lookup cache cleared."))
+
+
+# ---------------------------------------------------------------- Web Insights
+@app.route("/insights")
 def index():
-    return render_template("index.html", api_ready=zia_api.creds_configured(),
-                           jobs=sorted(JOBS.items(), key=lambda kv: kv[1]["started"], reverse=True)[:10])
+    csvs = [f for f in library() if f["name"].lower().endswith(".csv")]
+    return render_template("index.html", files=csvs, other=len(library()) - len(csvs),
+                           jobs=sorted(JOBS.items(), key=lambda kv: kv[1]["started"], reverse=True)[:10],
+                           selected=request.args.get("file", ""), error=request.args.get("err", ""))
 
 
 @app.route("/help")
 def help_page():
-    return render_template("help.html")
+    return render_template("help.html", workspace=shared.WORKSPACE)
 
 
-@app.route("/upload", methods=["POST"])
+@app.route("/insights/run", methods=["POST"])
 def upload():
-    f = request.files.get("export")
-    if not f or not f.filename:
-        return render_template("index.html", api_ready=zia_api.creds_configured(), jobs=[],
-                               error="Choose a Web Insights CSV export first."), 400
-    if not f.filename.lower().endswith(".csv"):
-        return render_template("index.html", api_ready=zia_api.creds_configured(), jobs=[],
-                               error="That isn't a .csv file. In Web Insights, use Export to CSV."), 400
-    job_id = uuid.uuid4().hex[:12]
-    path = os.path.join(UPLOADS, job_id + ".csv")
-    f.save(path)
-
+    name = request.form.get("file", "")
+    try:
+        path = os.path.join(LIBRARY, gui.safe_name(name))
+    except ValueError:
+        path = ""
+    if not path or not os.path.exists(path) or not name.lower().endswith(".csv"):
+        return redirect(url_for("index", err="Choose an export from the library first (add one on the dashboard)."))
     use_api = request.form.get("use_api") == "on"
-    creds = None
-    if use_api:
-        overrides = {k: request.form.get(k, "").strip() for k in ("ZIA_VANITY_DOMAIN", "ZIA_CLIENT_ID", "ZIA_CLIENT_SECRET")}
-        creds = zia_api.get_creds(overrides={k: v for k, v in overrides.items() if v})
-        if not all(creds):
-            os.remove(path)
-            return render_template("index.html", api_ready=False, jobs=[],
-                                   error="The Zscaler lookup needs a vanity domain, client ID and client secret "
-                                         "(in the .env file or the fields below)."), 400
-
-    stem = os.path.splitext(os.path.basename(f.filename))[0][:60] + "_categorized"
-    JOBS[job_id] = dict(status="running", pct=0, msg="Starting", filename=f.filename, stem=stem,
+    if use_api and not creds.status()["ready"]:
+        return redirect(url_for("index", err="Connect Zscaler on the dashboard first, or untick the lookup."))
+    job_id = uuid.uuid4().hex[:12]
+    stem = os.path.splitext(name)[0][:60] + "_categorized"
+    JOBS[job_id] = dict(status="running", pct=0, msg="Starting", filename=name, stem=stem,
                         started=datetime.datetime.now(), use_api=use_api)
-    threading.Thread(target=run_job, args=(job_id, path, use_api, creds, request.form.get("keep") == "on"),
-                     daemon=True).start()
+    threading.Thread(target=run_job, args=(job_id, path, use_api), daemon=True).start()
     return redirect(url_for("job_page", job_id=job_id))
 
 
@@ -122,5 +202,19 @@ def download(job_id, kind):
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5055))
-    print(f"\n  Web Insights Portal running at http://127.0.0.1:{port}\n  Press Ctrl+C to stop.\n")
+    print(f"""
+  ZIA Toolkit running at http://127.0.0.1:{port}   (opening your browser)
+
+  Quick start
+    1. Connect Zscaler once: type your OneAPI client on the dashboard, or put it in .env and restart.
+    2. Add your Web Insights CSV export(s) to the library on the dashboard.
+    3. Open Web Insights (categorize hosts) or Block impact (what breaks if we block these categories?).
+    Full instructions: the "How to use" tab.
+
+  Exports library, lookup cache and results: {shared.WORKSPACE}
+  Press Ctrl+C to stop.
+""")
+    if not os.environ.get("NO_BROWSER"):
+        import webbrowser
+        threading.Timer(1.0, lambda: webbrowser.open(f"http://127.0.0.1:{port}/")).start()
     app.run(host="127.0.0.1", port=port, debug=False, threaded=True)
