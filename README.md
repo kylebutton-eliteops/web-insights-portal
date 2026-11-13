@@ -49,7 +49,7 @@ categories come from the logs. Results go into one shared cache, so a host looke
 ## Privacy and data
 
 - Listens on `127.0.0.1` only. The only data sent anywhere is hostnames to Zscaler's own URL lookup API.
-- Exports contain user names. They stay in the library (`~/ZIA Toolkit/`, or `~/ZIA Category Impact/` if that already exists; override with `ZIA_TOOLKIT_WORKSPACE`) until you remove them on the dashboard. Web Insights outputs contain counts only and stay in `data/outputs/` until you delete them.
+- Exports contain user names. Everything is saved directly in the folder you run the toolkit from: exports in `logs/`, results in `output/` (Web Insights results in `output/web_insights/`) and the lookup cache in `lookup_cache.json`. All of it is git-ignored. Exports stay in `logs/` until you remove them on the dashboard; Web Insights outputs contain counts only. Set `ZIA_TOOLKIT_WORKSPACE` to keep them somewhere else.
 - Credentials typed on the dashboard live in memory until you stop the toolkit and are never written to disk. Keep `.env` out of git (already in `.gitignore`).
 
 ## Files

@@ -7,10 +7,10 @@ import json
 import os
 import threading
 
-HOME = os.path.expanduser("~")
-_legacy = os.path.join(HOME, "ZIA Category Impact")   # where the standalone Category Impact tool kept its files
-WORKSPACE = (os.environ.get("ZIA_TOOLKIT_WORKSPACE") or os.environ.get("ZIA_IMPACT_WORKSPACE")
-             or (_legacy if os.path.isdir(_legacy) else os.path.join(HOME, "ZIA Toolkit")))
+HERE = os.path.dirname(os.path.abspath(__file__))
+# Everything is kept directly in the folder the toolkit runs from: logs/ (exports library), output/ (results) and
+# lookup_cache.json. Set ZIA_TOOLKIT_WORKSPACE to keep them somewhere else.
+WORKSPACE = os.environ.get("ZIA_TOOLKIT_WORKSPACE") or os.environ.get("ZIA_IMPACT_WORKSPACE") or HERE
 os.environ["ZIA_IMPACT_WORKSPACE"] = WORKSPACE        # Category Impact reads this when imported
 CACHE = os.path.join(WORKSPACE, "lookup_cache.json")
 LOCK = threading.Lock()

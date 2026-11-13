@@ -2,3 +2,7 @@
 .venv/
 data/
 __pycache__/
+logs/
+output/
+lookup_cache.json
+.imported.json

@@ -20,10 +20,10 @@ import impact_bp
 import shared
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-OUTPUTS = os.path.join(HERE, "data", "outputs")
-os.makedirs(OUTPUTS, exist_ok=True)
 gui = impact_bp.gui           # Category Impact's helpers; its UPLOADS folder is the shared exports library
 LIBRARY = gui.UPLOADS
+OUTPUTS = os.path.join(gui.OUTPUT, "web_insights")   # Web Insights results, next to Block impact's
+os.makedirs(OUTPUTS, exist_ok=True)
 
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 2 * 1024 ** 3   # 2 GB uploads
