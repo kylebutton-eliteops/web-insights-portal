@@ -139,11 +139,11 @@ FILES
   zia_impact_gui.html      its page (opened by the tool)
   zia_category_impact.py   the engine; can also run on its own from a
                            command line (python3 zia_category_impact.py -h)
-  ~/ZIA Category Impact/   in your home folder, created on first run: your
-                           uploaded logs, the lookup cache and results. Kept
-                           between runs and new versions of the tool. Delete it
-                           to start fresh. (Set ZIA_IMPACT_WORKSPACE to use a
-                           different folder.)
+  logs/, output/,          inside the ZIA Toolkit: created in the folder the toolkit
+  lookup_cache.json        runs from (not in your home folder): your uploaded logs,
+                           results and the lookup cache. Kept between runs.
+                           Delete them to start fresh. (Set ZIA_TOOLKIT_WORKSPACE
+                           to use a different folder.)
 
 
 TROUBLESHOOTING
