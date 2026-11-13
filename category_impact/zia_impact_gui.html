@@ -738,9 +738,49 @@ Dynamic DNS Host
 Newly Revived Domains
 Generative AI and ML Applications
 File Convertors
-General AI & ML Applications`};
+General AI & ML Applications`,
+"High-risk categories by ID (example)": `OTHER_ADULT_MATERIAL
+ADULT_THEMES
+LINGERIE_BIKINI
+NUDITY
+PORNOGRAPHY
+SEXUALITY
+ADULT_SEX_EDUCATION
+K_12_SEX_EDUCATION
+GAMBLING
+OTHER_ILLEGAL_OR_QUESTIONABLE
+COPYRIGHT_INFRINGEMENT
+COMPUTER_HACKING
+QUESTIONABLE
+PROFANITY
+MATURE_HUMOR
+ANONYMIZER
+FILE_HOST
+SHAREWARE_DOWNLOAD
+EMAIL_HOST
+MILITANCY_HATE_AND_EXTREMISM
+OTHER_MISCELLANEOUS
+TASTELESS
+VIOLENCE
+ADWARE_OR_SPYWARE
+P2P_COMMUNICATION
+MISCELLANEOUS_OR_UNKNOWN
+SOCIAL_ADULT
+NEWLY_REG_DOMAINS
+NON_CATEGORIZABLE
+ENCR_WEB_CONTENT
+DNS_OVER_HTTPS
+DYNAMIC_DNS
+NEWLY_REVIVED_DOMAINS
+AI_ML_APPS
+FILE_CONVERTORS
+GENERAL_AI_ML`};
 let SETS = recall("zci:sets");
-if(!SETS){ SETS = {...DEFAULT_SETS}; store("zci:sets", SETS); }
+if(!SETS){ SETS = {...DEFAULT_SETS}; }
+/* add example lists that shipped after this browser first saved its lists (once each, so a deleted example stays deleted) */
+const seeded = recall("zci:seeded") || [];
+for(const n of Object.keys(DEFAULT_SETS)){ if(!seeded.includes(n)){ if(SETS[n] == null) SETS[n] = DEFAULT_SETS[n]; seeded.push(n); } }
+store("zci:sets", SETS); store("zci:seeded", seeded);
 function renderSets(sel){
   const names = Object.keys(SETS);
   $("setPick").innerHTML = `<option value="">Unsaved list</option>` + names.map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join("");
